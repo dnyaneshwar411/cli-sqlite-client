@@ -3,7 +3,94 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>SQLite Viewer — TUI-inspired database browser</title>
+
+    <title>SQLite Viewer | Gruvbox SQLite CLI Database Browser</title>
+    <meta
+      name="description"
+      content="SQLite Viewer is a fast, Gruvbox-themed SQLite CLI and terminal database browser for inspecting tables, browsing rows, and navigating with Vim-style keyboard controls."
+    />
+    <meta
+      name="keywords"
+      content="SQLite viewer, SQLite CLI, SQLite database browser, terminal database browser, TUI, Node.js, React, Ink, Gruvbox, Vim keybindings, inspect SQLite database, SQLite client"
+    />
+    <meta name="author" content="dnyaneshwar411" />
+    <meta name="application-name" content="SQLite Viewer" />
+    <meta name="theme-color" content="#1d2021" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="googlebot" content="index, follow, max-image-preview:large" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta name="format-detection" content="telephone=no" />
+
+    <link rel="canonical" href="https://dnyaneshwar411.github.io/cli-sqlite-client/" />
+    <link rel="icon" type="image/svg+xml" href="public/logo.svg" />
+    <link rel="apple-touch-icon" href="public/logo.svg" />
+
+    <!-- Open Graph: used by Facebook, Instagram link previews, LinkedIn, Slack, Discord, and more. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="SQLite Viewer" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="https://dnyaneshwar411.github.io/cli-sqlite-client/" />
+    <meta property="og:title" content="SQLite Viewer | Gruvbox SQLite CLI Database Browser" />
+    <meta
+      property="og:description"
+      content="Browse SQLite tables and inspect rows directly in a fast, Gruvbox-themed terminal database browser with Vim-style controls."
+    />
+    <meta
+      property="og:image"
+      content="https://cli-sqlite-client.vercel.app/public/social-card.png"
+    />
+    <meta property="og:image:secure_url" content="https://cli-sqlite-client.vercel.app/public/social-card.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="SQLite Viewer, a Gruvbox-themed terminal database browser"
+    />
+
+    <!-- Twitter/X card. The same large image is also suitable for LinkedIn and Instagram previews. -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@dnyaneshwar411" />
+    <meta name="twitter:creator" content="@dnyaneshwar411" />
+    <meta name="twitter:title" content="SQLite Viewer | Gruvbox SQLite CLI Database Browser" />
+    <meta
+      name="twitter:description"
+      content="A fast SQLite CLI and terminal database browser for browsing tables, inspecting rows, and navigating with Vim-style keyboard controls."
+    />
+    <meta
+      name="twitter:image"
+      content="https://cli-sqlite-client.vercel.app/public/social-card.png"
+    />
+    <meta
+      name="twitter:image:alt"
+      content="SQLite Viewer, a Gruvbox-themed terminal database browser"
+    />
+
+    <!-- Structured data for search engines. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "SQLite Viewer",
+        "alternateName": "cli-sqlite-client",
+        "description": "A fast, Gruvbox-themed SQLite CLI and terminal database browser for inspecting tables, browsing rows, and navigating with Vim-style keyboard controls.",
+        "url": "https://dnyaneshwar411.github.io/cli-sqlite-client/",
+        "image": "https://cli-sqlite-client.vercel.app/public/social-card.png",
+        "applicationCategory": "DeveloperApplication",
+        "applicationSubCategory": "SQLite database browser",
+        "operatingSystem": "macOS, Linux, Windows",
+        "downloadUrl": "https://github.com/dnyaneshwar411/cli-sqlite-client",
+        "codeRepository": "https://github.com/dnyaneshwar411/cli-sqlite-client",
+        "programmingLanguage": ["TypeScript", "JavaScript"],
+        "softwareRequirements": "Node.js 22.5.0 or later",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
     <style>
       /* =========================================================
      GRUVBOX DARK TOKEN SYSTEM
@@ -235,11 +322,11 @@
         gap: 10px;
       }
 
-      .brand-mark {
-        color: var(--orange);
-        font-size: 18px;
-        line-height: 1;
-        letter-spacing: -2px;
+      .brand-logo {
+        display: block;
+        width: 28px;
+        height: 28px;
+        flex: none;
       }
 
       .brand-text {
@@ -1315,7 +1402,13 @@
     <header class="app-header">
       <div class="header-inner">
         <div class="brand">
-          <span class="brand-mark" aria-hidden="true">▚</span>
+          <img
+            class="brand-logo"
+            src="public/logo.svg"
+            alt=""
+            width="28"
+            height="28"
+          />
           <div class="brand-text">
             <span class="brand-name"
               >sqlite<span class="brand-accent">_</span>viewer</span
