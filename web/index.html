@@ -1,0 +1,2796 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SQLite Viewer — TUI-inspired database browser</title>
+    <style>
+      /* =========================================================
+     GRUVBOX DARK TOKEN SYSTEM
+     ========================================================= */
+      :root {
+        color-scheme: dark;
+
+        --bg-hard: #1d2021;
+        --bg: #282828;
+        --bg-alt: #232526;
+        --bg-soft: #32302f;
+        --surface: #3c3836;
+        --surface-2: #504945;
+
+        --line: #3c3836;
+        --line-strong: #504945;
+
+        --fg: #ebdbb2;
+        --fg-dim: #bdae93;
+        --fg-muted: #928374;
+
+        --red: #fb4934;
+        --green: #b8bb26;
+        --yellow: #fabd2f;
+        --blue: #83a598;
+        --purple: #d3869b;
+        --aqua: #8ec07c;
+        --orange: #fe8019;
+        --orange-soft: rgba(254, 128, 25, 0.11);
+
+        --mono:
+          ui-monospace, SFMono-Regular, "SF Mono", "JetBrains Mono", Menlo,
+          Consolas, "Liberation Mono", monospace;
+
+        --radius: 3px;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html {
+        -webkit-text-size-adjust: 100%;
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg-hard);
+        color: var(--fg);
+        font-family: var(--mono);
+        font-size: 14px;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4,
+      p,
+      ul,
+      ol,
+      figure {
+        margin: 0;
+      }
+      ul,
+      ol {
+        padding: 0;
+        list-style: none;
+      }
+      button {
+        font-family: inherit;
+      }
+      a {
+        color: inherit;
+      }
+
+      :focus-visible {
+        outline: 2px solid var(--orange);
+        outline-offset: 2px;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      .wrap {
+        width: 100%;
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      /* =========================================================
+     SHARED CONTROLS
+     ========================================================= */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 7px 13px;
+        font-size: 12.5px;
+        line-height: 1.3;
+        color: var(--fg);
+        background: transparent;
+        border: 1px solid var(--line-strong);
+        border-radius: var(--radius);
+        cursor: pointer;
+        white-space: nowrap;
+        text-decoration: none;
+        transition:
+          background-color 0.12s ease,
+          border-color 0.12s ease,
+          color 0.12s ease;
+      }
+      .btn:hover {
+        background: var(--surface);
+        border-color: var(--fg-muted);
+      }
+      .btn:active {
+        background: var(--surface-2);
+      }
+      .btn:focus-visible {
+        outline: 2px solid var(--orange);
+        outline-offset: 2px;
+      }
+
+      .btn-primary {
+        background: var(--orange);
+        border-color: var(--orange);
+        color: #1d2021;
+        font-weight: 600;
+      }
+      .btn-primary:hover {
+        background: #ff9b47;
+        border-color: #ff9b47;
+      }
+      .btn-primary:active {
+        background: #e0700f;
+        border-color: #e0700f;
+      }
+
+      .ctl {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        font-size: 12px;
+        color: var(--fg-dim);
+        background: var(--bg);
+        border: 1px solid var(--line-strong);
+        border-radius: var(--radius);
+        cursor: pointer;
+        transition:
+          background-color 0.12s ease,
+          border-color 0.12s ease,
+          color 0.12s ease;
+      }
+      .ctl:hover:not(:disabled) {
+        color: var(--fg);
+        background: var(--surface);
+        border-color: var(--fg-muted);
+      }
+      .ctl:active:not(:disabled) {
+        background: var(--surface-2);
+      }
+      .ctl:disabled {
+        opacity: 0.38;
+        cursor: not-allowed;
+      }
+
+      kbd {
+        display: inline-block;
+        font-family: var(--mono);
+        font-size: 11.5px;
+        line-height: 1.4;
+        padding: 1px 6px;
+        color: var(--fg);
+        background: var(--bg-alt);
+        border: 1px solid var(--line-strong);
+        border-bottom-width: 2px;
+        border-radius: var(--radius);
+        white-space: nowrap;
+      }
+
+      code {
+        font-family: var(--mono);
+        font-size: 0.94em;
+        color: var(--fg-dim);
+      }
+
+      /* =========================================================
+     APP HEADER
+     ========================================================= */
+      .app-header {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        background: var(--bg-hard);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .header-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        flex-wrap: wrap;
+        padding: 12px 24px;
+        max-width: 1180px;
+        margin: 0 auto;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .brand-mark {
+        color: var(--orange);
+        font-size: 18px;
+        line-height: 1;
+        letter-spacing: -2px;
+      }
+
+      .brand-text {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+      }
+
+      .brand-name {
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        color: var(--fg);
+      }
+      .brand-accent {
+        color: var(--orange);
+      }
+
+      .brand-sub {
+        font-size: 10.5px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--fg-muted);
+      }
+
+      .header-meta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .conn {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 4px 9px;
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        color: var(--green);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--bg-alt);
+      }
+      .conn .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+      .conn.is-loading {
+        color: var(--yellow);
+      }
+      .conn.is-loading .dot {
+        animation: pulse 1s ease-in-out infinite;
+      }
+      .conn.is-error {
+        color: var(--red);
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.25;
+        }
+      }
+
+      .db-path {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 9px;
+        font-size: 11.5px;
+        color: var(--fg-dim);
+        background: var(--bg-alt);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+      }
+      .db-path-label {
+        font-size: 9.5px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--fg-muted);
+      }
+      .db-path code {
+        color: var(--fg);
+        font-size: 11.5px;
+      }
+
+      .header-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      /* =========================================================
+     HERO
+     ========================================================= */
+      .hero {
+        padding: 64px 0 56px;
+      }
+
+      .eyebrow {
+        font-size: 11.5px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--orange);
+        margin-bottom: 18px;
+      }
+
+      .hero h1 {
+        font-size: clamp(28px, 4.6vw, 46px);
+        line-height: 1.08;
+        letter-spacing: -0.035em;
+        font-weight: 600;
+        color: var(--fg);
+        max-width: 17ch;
+      }
+
+      .hero-lede {
+        margin-top: 18px;
+        max-width: 62ch;
+        font-size: 14.5px;
+        color: var(--fg-dim);
+      }
+
+      .hero-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 26px;
+      }
+
+      .stack-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 28px;
+        padding-top: 22px;
+        border-top: 1px solid var(--line);
+      }
+      .stack-list li {
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--fg-muted);
+        padding: 3px 9px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+      }
+
+      /* =========================================================
+     SECTION SHELL
+     ========================================================= */
+      .section {
+        padding: 52px 0;
+        border-top: 1px solid var(--line);
+      }
+
+      .section-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px 24px;
+        flex-wrap: wrap;
+        margin-bottom: 22px;
+      }
+
+      .section-title {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+      }
+
+      .section-num {
+        font-size: 11.5px;
+        letter-spacing: 0.1em;
+        color: var(--orange);
+      }
+
+      .section-head h2 {
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--fg);
+      }
+
+      .section-head p {
+        font-size: 12.5px;
+        color: var(--fg-muted);
+        max-width: 60ch;
+      }
+
+      /* =========================================================
+     WORKSPACE — TWO PANE BROWSER (the visual centerpiece)
+     ========================================================= */
+      .browser {
+        display: grid;
+        grid-template-columns: 244px minmax(0, 1fr);
+        border: 1px solid var(--line-strong);
+        border-radius: var(--radius);
+        background: var(--bg);
+        overflow: hidden;
+      }
+
+      /* ---- sidebar ---- */
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        background: var(--bg-alt);
+        border-right: 1px solid var(--line-strong);
+        transition: outline-color 0.12s ease;
+        outline: 1px solid transparent;
+        outline-offset: -1px;
+      }
+      .sidebar.is-focused {
+        outline-color: var(--surface-2);
+      }
+
+      .sidebar-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .db-name {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 12.5px;
+        color: var(--fg);
+      }
+      .db-name .dot-sm {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--orange);
+      }
+
+      .badge-count {
+        font-size: 10.5px;
+        color: var(--fg-muted);
+        letter-spacing: 0.04em;
+      }
+
+      .search-wrap {
+        position: relative;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .search-wrap input {
+        width: 100%;
+        padding: 5px 24px 5px 9px;
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--fg);
+        background: var(--bg-hard);
+        border: 1px solid var(--line-strong);
+        border-radius: var(--radius);
+        transition: border-color 0.12s ease;
+      }
+      .search-wrap input::placeholder {
+        color: var(--fg-muted);
+      }
+      .search-wrap input:hover {
+        border-color: var(--fg-muted);
+      }
+      .search-wrap input:focus {
+        outline: none;
+        border-color: var(--orange);
+      }
+      .search-wrap input:focus-visible {
+        outline: 2px solid var(--orange);
+        outline-offset: 1px;
+      }
+
+      .search-hint {
+        position: absolute;
+        right: 18px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 11px;
+        color: var(--fg-muted);
+        pointer-events: none;
+      }
+
+      .table-list {
+        position: relative;
+        flex: 1;
+        overflow-y: auto;
+        padding: 6px;
+        max-height: 280px;
+        min-height: 120px;
+      }
+
+      .table-list li {
+        margin-bottom: 2px;
+      }
+
+      .table-item {
+        display: grid;
+        grid-template-columns: 12px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 7px;
+        width: 100%;
+        padding: 6px 8px;
+        font-size: 12.5px;
+        text-align: left;
+        color: var(--fg-dim);
+        background: transparent;
+        border: 1px solid transparent;
+        border-left: 2px solid transparent;
+        border-radius: var(--radius);
+        cursor: pointer;
+        transition:
+          background-color 0.1s ease,
+          color 0.1s ease,
+          border-color 0.1s ease;
+      }
+      .table-item:hover {
+        background: var(--surface);
+        color: var(--fg);
+      }
+      .table-item:focus-visible {
+        outline: 2px solid var(--orange);
+        outline-offset: -1px;
+      }
+
+      .table-item.is-selected {
+        background: var(--orange-soft);
+        border-left-color: var(--orange);
+        color: var(--fg);
+      }
+
+      .table-item.is-cursor {
+        border-color: var(--line-strong);
+        color: var(--fg);
+      }
+
+      .cursor-mark {
+        color: var(--orange);
+        font-size: 10px;
+        opacity: 0;
+        transition: opacity 0.1s ease;
+      }
+      .table-item.is-cursor .cursor-mark {
+        opacity: 1;
+      }
+
+      .t-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .t-rows {
+        font-size: 10.5px;
+        color: var(--fg-muted);
+        font-variant-numeric: tabular-nums;
+      }
+      .table-item.is-selected .t-rows {
+        color: var(--orange);
+      }
+
+      .list-empty {
+        padding: 14px 10px;
+        font-size: 12px;
+        color: var(--fg-muted);
+        line-height: 1.5;
+      }
+
+      .sidebar-foot {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 8px 12px;
+        font-size: 10.5px;
+        color: var(--fg-muted);
+        border-top: 1px solid var(--line);
+        letter-spacing: 0.03em;
+      }
+
+      /* ---- content pane ---- */
+      .content {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        outline: 1px solid transparent;
+        outline-offset: -1px;
+        transition: outline-color 0.12s ease;
+      }
+      .content.is-focused {
+        outline-color: var(--surface-2);
+      }
+
+      .content-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 14px 16px 12px;
+      }
+
+      .content-eyebrow {
+        font-size: 10px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--fg-muted);
+      }
+
+      .content-head h3 {
+        font-size: 17px;
+        font-weight: 600;
+        letter-spacing: -0.015em;
+        color: var(--fg);
+        margin-top: 2px;
+      }
+
+      .content-desc {
+        margin-top: 4px;
+        font-size: 12.5px;
+        color: var(--fg-muted);
+        max-width: 56ch;
+      }
+
+      .focus-pill {
+        flex: none;
+        font-size: 10.5px;
+        letter-spacing: 0.06em;
+        color: var(--fg-muted);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 3px 8px;
+        background: var(--bg-alt);
+        white-space: nowrap;
+      }
+      .focus-pill b {
+        color: var(--orange);
+        font-weight: 500;
+      }
+
+      .meta-strip {
+        display: flex;
+        flex-wrap: wrap;
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        background: var(--bg-alt);
+      }
+
+      .meta-item {
+        display: flex;
+        align-items: baseline;
+        gap: 7px;
+        padding: 7px 14px;
+        border-right: 1px solid var(--line);
+        font-size: 11.5px;
+      }
+      .meta-item:last-child {
+        border-right: 0;
+      }
+      .meta-item span {
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--fg-muted);
+      }
+      .meta-item b {
+        font-weight: 500;
+        color: var(--fg);
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* ---- data grid ---- */
+      .grid-wrap {
+        position: relative;
+        overflow: auto;
+        max-height: 460px;
+        min-height: 220px;
+        flex: 1;
+      }
+
+      .data-grid {
+        width: 100%;
+        min-width: 620px;
+        border-collapse: collapse;
+        font-size: 12.5px;
+      }
+
+      .data-grid thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        padding: 8px 14px;
+        text-align: left;
+        font-size: 10px;
+        font-weight: 500;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--fg-muted);
+        background: var(--bg-alt);
+        border-bottom: 1px solid var(--line-strong);
+        white-space: nowrap;
+      }
+      .data-grid thead th.ta-r {
+        text-align: right;
+      }
+
+      .data-grid tbody td {
+        padding: 7px 14px;
+        border-bottom: 1px solid var(--line);
+        border-left: 2px solid transparent;
+        color: var(--fg-dim);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 280px;
+      }
+
+      .data-grid tbody tr {
+        transition: background-color 0.08s ease;
+      }
+      .data-grid tbody tr:hover {
+        background: var(--surface);
+      }
+      .data-grid tbody tr.is-cursor {
+        background: var(--orange-soft);
+      }
+      .data-grid tbody tr.is-cursor td:first-child {
+        border-left-color: var(--orange);
+      }
+
+      .data-grid td.num {
+        text-align: right;
+        color: var(--fg);
+        font-variant-numeric: tabular-nums;
+      }
+      .data-grid td.date {
+        color: var(--fg-muted);
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* ---- status badges ---- */
+      .badge {
+        display: inline-block;
+        padding: 0 7px;
+        font-size: 10.5px;
+        line-height: 1.65;
+        letter-spacing: 0.02em;
+        border: 1px solid;
+        border-radius: 2px;
+      }
+      .badge-green {
+        color: var(--green);
+        border-color: rgba(184, 187, 38, 0.34);
+        background: rgba(184, 187, 38, 0.08);
+      }
+      .badge-yellow {
+        color: var(--yellow);
+        border-color: rgba(250, 189, 47, 0.34);
+        background: rgba(250, 189, 47, 0.08);
+      }
+      .badge-red {
+        color: var(--red);
+        border-color: rgba(251, 73, 52, 0.34);
+        background: rgba(251, 73, 52, 0.08);
+      }
+      .badge-blue {
+        color: var(--blue);
+        border-color: rgba(131, 165, 152, 0.34);
+        background: rgba(131, 165, 152, 0.08);
+      }
+      .badge-gray {
+        color: var(--fg-muted);
+        border-color: var(--line-strong);
+        background: transparent;
+      }
+
+      /* ---- loading / empty / error states ---- */
+      .grid-state {
+        padding: 26px 18px;
+        font-size: 12.5px;
+      }
+
+      .state-title {
+        color: var(--fg);
+        font-size: 12.5px;
+        margin-bottom: 4px;
+      }
+      .state-note {
+        color: var(--fg-muted);
+        font-size: 12px;
+        max-width: 54ch;
+        margin-bottom: 14px;
+      }
+      .grid-state.is-error .state-title {
+        color: var(--red);
+      }
+      .grid-state.is-error {
+        border-left: 2px solid var(--red);
+        background: rgba(251, 73, 52, 0.05);
+        margin: 12px;
+        border-radius: var(--radius);
+      }
+
+      .skeleton {
+        margin-top: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+        max-width: 640px;
+      }
+      .skeleton span {
+        display: block;
+        height: 11px;
+        background: var(--surface);
+        border-radius: 2px;
+      }
+      .skeleton span:nth-child(1) {
+        width: 92%;
+      }
+      .skeleton span:nth-child(2) {
+        width: 78%;
+      }
+      .skeleton span:nth-child(3) {
+        width: 86%;
+      }
+      .skeleton span:nth-child(4) {
+        width: 64%;
+      }
+      .skeleton span:nth-child(5) {
+        width: 88%;
+      }
+      .skeleton span:nth-child(6) {
+        width: 72%;
+      }
+      .skeleton span:nth-child(7) {
+        width: 55%;
+      }
+
+      /* ---- grid controls ---- */
+      .grid-controls {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px 14px;
+        flex-wrap: wrap;
+        padding: 9px 14px;
+        border-top: 1px solid var(--line-strong);
+        background: var(--bg-alt);
+      }
+
+      .pager {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+
+      .page-indicator {
+        font-size: 11.5px;
+        color: var(--fg-muted);
+        font-variant-numeric: tabular-nums;
+        padding: 0 3px;
+      }
+
+      .range {
+        font-size: 11.5px;
+        color: var(--fg-dim);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .controls-right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .query-readout {
+        display: block;
+        padding: 7px 14px;
+        font-size: 11.5px;
+        color: var(--fg-muted);
+        background: var(--bg-hard);
+        border-top: 1px solid var(--line);
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+      .query-readout .q {
+        color: var(--fg-dim);
+      }
+      .query-readout .ms {
+        color: var(--aqua);
+      }
+      .query-readout .err {
+        color: var(--red);
+      }
+
+      /* =========================================================
+     SHORTCUTS
+     ========================================================= */
+      .shortcut-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(238px, 1fr));
+        gap: 0 32px;
+      }
+
+      .shortcut {
+        display: grid;
+        grid-template-columns: 104px minmax(0, 1fr);
+        align-items: center;
+        gap: 12px;
+        padding: 10px 0;
+        border-top: 1px solid var(--line);
+        font-size: 12.5px;
+        color: var(--fg-dim);
+      }
+
+      .shortcut-keys {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+      }
+      .shortcut-keys .sep {
+        color: var(--fg-muted);
+        font-size: 11px;
+        align-self: center;
+      }
+
+      /* =========================================================
+     FEATURES (editorial blocks)
+     ========================================================= */
+      .features {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 0 36px;
+      }
+
+      .feature {
+        padding: 18px 0 22px;
+        border-top: 1px solid var(--line);
+      }
+
+      .feature-num {
+        font-size: 10.5px;
+        letter-spacing: 0.12em;
+        color: var(--orange);
+        display: block;
+        margin-bottom: 8px;
+      }
+
+      .feature h3 {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--fg);
+        margin-bottom: 6px;
+        letter-spacing: -0.005em;
+      }
+
+      .feature p {
+        font-size: 12.5px;
+        color: var(--fg-muted);
+        line-height: 1.6;
+      }
+
+      /* =========================================================
+     CODE BLOCKS
+     ========================================================= */
+      .code-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 16px;
+      }
+
+      .code-block {
+        border: 1px solid var(--line-strong);
+        border-radius: var(--radius);
+        background: var(--bg-alt);
+        overflow: hidden;
+        min-width: 0;
+      }
+
+      .code-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 6px 10px 6px 12px;
+        border-bottom: 1px solid var(--line);
+        font-size: 10.5px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--fg-muted);
+        background: var(--bg);
+      }
+
+      .copy-btn {
+        font-family: var(--mono);
+        font-size: 10.5px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--fg-muted);
+        background: transparent;
+        border: 1px solid var(--line-strong);
+        border-radius: 2px;
+        padding: 1px 7px;
+        cursor: pointer;
+        transition:
+          color 0.12s ease,
+          border-color 0.12s ease;
+      }
+      .copy-btn:hover {
+        color: var(--orange);
+        border-color: var(--orange);
+      }
+
+      .code-block pre {
+        margin: 0;
+        padding: 12px 14px;
+        overflow-x: auto;
+        font-size: 12.5px;
+        line-height: 1.85;
+        color: var(--fg-dim);
+      }
+      .code-block pre .prompt {
+        color: var(--orange);
+        user-select: none;
+      }
+      .code-block pre .cmd {
+        color: var(--fg);
+      }
+      .code-block pre .cmt {
+        color: var(--fg-muted);
+      }
+
+      /* options table */
+      .options {
+        margin-top: 18px;
+        border-top: 1px solid var(--line);
+      }
+
+      .option-row {
+        display: grid;
+        grid-template-columns: 150px minmax(0, 1fr);
+        gap: 12px;
+        padding: 9px 0;
+        border-bottom: 1px solid var(--line);
+        font-size: 12.5px;
+        align-items: baseline;
+      }
+
+      .option-row code {
+        color: var(--yellow);
+      }
+      .option-row span {
+        color: var(--fg-muted);
+      }
+
+      /* =========================================================
+     FILE TREE
+     ========================================================= */
+      .file-tree {
+        border-top: 1px solid var(--line);
+      }
+
+      .file-row {
+        display: grid;
+        grid-template-columns: minmax(180px, 260px) minmax(0, 1fr);
+        gap: 16px;
+        padding: 9px 0;
+        border-bottom: 1px solid var(--line);
+        font-size: 12.5px;
+        align-items: baseline;
+      }
+
+      .file-row code {
+        color: var(--fg);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .file-row code .tree {
+        color: var(--fg-muted);
+        user-select: none;
+      }
+      .file-row span {
+        color: var(--fg-muted);
+      }
+
+      /* =========================================================
+     FOOTER
+     ========================================================= */
+      .app-footer {
+        border-top: 1px solid var(--line);
+        padding: 26px 0 40px;
+      }
+
+      .footer-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px 24px;
+        flex-wrap: wrap;
+        font-size: 11.5px;
+        color: var(--fg-muted);
+      }
+
+      .footer-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .footer-left .name {
+        color: var(--fg);
+      }
+      .footer-left .lic {
+        padding: 1px 7px;
+        border: 1px solid var(--line-strong);
+        border-radius: 2px;
+        font-size: 10.5px;
+        letter-spacing: 0.06em;
+      }
+
+      .footer-links {
+        display: flex;
+        gap: 16px;
+      }
+      .footer-links a {
+        color: var(--fg-dim);
+        text-decoration: none;
+        border-bottom: 1px solid transparent;
+        transition:
+          color 0.12s ease,
+          border-color 0.12s ease;
+      }
+      .footer-links a:hover {
+        color: var(--orange);
+        border-bottom-color: var(--orange);
+      }
+
+      /* =========================================================
+     QUIT OVERLAY
+     ========================================================= */
+      .overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: rgba(29, 32, 33, 0.94);
+      }
+      .overlay[hidden] {
+        display: none;
+      }
+
+      .overlay-box {
+        width: 100%;
+        max-width: 400px;
+        padding: 24px;
+        border: 1px solid var(--line-strong);
+        border-radius: var(--radius);
+        background: var(--bg);
+        text-align: left;
+      }
+      .overlay-box h2 {
+        font-size: 14px;
+        color: var(--fg);
+        margin-bottom: 6px;
+      }
+      .overlay-box p {
+        font-size: 12.5px;
+        color: var(--fg-muted);
+        margin-bottom: 18px;
+      }
+
+      /* =========================================================
+     RESPONSIVE
+     ========================================================= */
+      @media (max-width: 900px) {
+        .browser {
+          grid-template-columns: 1fr;
+        }
+        .sidebar {
+          border-right: 0;
+          border-bottom: 1px solid var(--line-strong);
+        }
+        .table-list {
+          max-height: 190px;
+        }
+        .grid-wrap {
+          max-height: 380px;
+        }
+        .hero {
+          padding: 48px 0 40px;
+        }
+        .section {
+          padding: 40px 0;
+        }
+      }
+
+      @media (max-width: 620px) {
+        .wrap {
+          padding: 0 16px;
+        }
+        .header-inner {
+          padding: 10px 16px;
+          gap: 12px;
+        }
+        .header-meta {
+          width: 100%;
+        }
+        .header-actions {
+          width: 100%;
+        }
+        .header-actions .btn {
+          flex: 1;
+          justify-content: center;
+        }
+        .content-head {
+          flex-direction: column;
+          gap: 10px;
+        }
+        .meta-item {
+          padding: 7px 10px;
+        }
+        .grid-controls {
+          justify-content: flex-start;
+        }
+        .controls-right {
+          width: 100%;
+          justify-content: space-between;
+        }
+        .shortcut {
+          grid-template-columns: 96px minmax(0, 1fr);
+        }
+        .option-row {
+          grid-template-columns: 1fr;
+          gap: 2px;
+        }
+        .file-row {
+          grid-template-columns: 1fr;
+          gap: 2px;
+        }
+        .hero h1 {
+          max-width: none;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.001ms !important;
+          scroll-behavior: auto !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- =========================================================
+     1. APPLICATION HEADER
+     ========================================================= -->
+    <header class="app-header">
+      <div class="header-inner">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">▚</span>
+          <div class="brand-text">
+            <span class="brand-name"
+              >sqlite<span class="brand-accent">_</span>viewer</span
+            >
+            <span class="brand-sub">TUI-inspired database browser</span>
+          </div>
+        </div>
+
+        <div class="header-meta">
+          <div class="conn" id="connEl" role="status" aria-live="polite">
+            <span class="dot" aria-hidden="true"></span>
+            <span id="connLabel">connected</span>
+          </div>
+
+          <div class="db-path">
+            <span class="db-path-label">db</span>
+            <code id="dbPath">~/data/analytics.db</code>
+          </div>
+
+          <div class="header-actions">
+            <button class="btn" id="openDbBtn" type="button">
+              Open database
+            </button>
+            <button class="btn" id="loadSampleBtn" type="button">
+              Load sample
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <!-- =========================================================
+       2. HERO
+       ========================================================= -->
+      <section class="hero wrap" aria-labelledby="hero-title">
+        <p class="eyebrow">// node · sqlite · react · ink</p>
+        <h1 id="hero-title">Inspect SQLite without leaving your flow.</h1>
+        <p class="hero-lede">
+          SQLite Viewer is a terminal database browser for people who live in
+          the shell. Open a <code>.db</code> file, walk the schema, page through
+          rows, and read your data without spinning up a GUI — all with
+          Vim-style keys and a Gruvbox palette that does not fight your eyes.
+        </p>
+
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#workspace">Browse the demo ↓</a>
+          <a class="btn" href="#install">Installation</a>
+        </div>
+
+        <ul class="stack-list" aria-label="Built with">
+          <li>Node.js</li>
+          <li>SQLite</li>
+          <li>React</li>
+          <li>Ink</li>
+        </ul>
+      </section>
+
+      <!-- =========================================================
+       3. MAIN DATABASE WORKSPACE  (visual centerpiece)
+       ========================================================= -->
+      <section
+        class="section wrap"
+        id="workspace"
+        aria-labelledby="workspace-title"
+      >
+        <div class="section-head">
+          <div class="section-title">
+            <span class="section-num">01</span>
+            <h2 id="workspace-title">Workspace</h2>
+          </div>
+          <p>
+            Two-pane browser — <kbd>Tab</kbd> switches panes, <kbd>j</kbd>/<kbd
+              >k</kbd
+            >
+            moves, <kbd>Enter</kbd> selects.
+          </p>
+        </div>
+
+        <div class="browser" id="browser">
+          <!-- ---------- left sidebar ---------- -->
+          <aside
+            class="sidebar is-focused"
+            id="sidebar"
+            aria-label="Database tables"
+          >
+            <div class="sidebar-head">
+              <span class="db-name"
+                ><span class="dot-sm" aria-hidden="true"></span
+                >analytics.db</span
+              >
+              <span class="badge-count" id="tableCount">4 tables</span>
+            </div>
+
+            <div class="search-wrap">
+              <label class="sr-only" for="tableSearch">Filter tables</label>
+              <input
+                id="tableSearch"
+                type="search"
+                placeholder="filter tables…"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <span class="search-hint" aria-hidden="true">/</span>
+            </div>
+
+            <ul class="table-list" id="tableList" aria-label="Table list"></ul>
+
+            <div class="sidebar-foot">
+              <span>schema: main</span>
+              <span>sqlite 3.45.1</span>
+            </div>
+          </aside>
+
+          <!-- ---------- right content ---------- -->
+          <div class="content" id="content">
+            <div class="content-head">
+              <div>
+                <p class="content-eyebrow">table</p>
+                <h3 id="tableName">users</h3>
+                <p class="content-desc" id="tableDesc">
+                  Account records with profile metadata and lifecycle state.
+                </p>
+              </div>
+              <span class="focus-pill" id="focusPill"
+                >focus: <b>tables</b></span
+              >
+            </div>
+
+            <div class="meta-strip">
+              <div class="meta-item">
+                <span>rows</span><b id="metaRows">248</b>
+              </div>
+              <div class="meta-item">
+                <span>page</span><b id="metaPage">1 / 25</b>
+              </div>
+              <div class="meta-item">
+                <span>duration</span><b id="metaDuration">11 ms</b>
+              </div>
+              <div class="meta-item">
+                <span>columns</span><b id="metaCols">5</b>
+              </div>
+              <div class="meta-item">
+                <span>offset</span><b id="metaOffset">0</b>
+              </div>
+            </div>
+
+            <div class="grid-wrap" id="gridWrap">
+              <table class="data-grid" id="dataGrid"></table>
+              <div class="grid-state" id="gridState" hidden></div>
+            </div>
+
+            <!-- ---------- 4. data grid controls ---------- -->
+            <div class="grid-controls">
+              <div class="pager">
+                <button
+                  class="ctl"
+                  id="prevBtn"
+                  type="button"
+                  aria-label="Previous page"
+                >
+                  ← prev
+                </button>
+                <span class="page-indicator" id="pageIndicator"
+                  >page 1 / 25</span
+                >
+                <button
+                  class="ctl"
+                  id="nextBtn"
+                  type="button"
+                  aria-label="Next page"
+                >
+                  next →
+                </button>
+              </div>
+
+              <div class="controls-right">
+                <span class="range" id="rangeLabel">Rows 1–10 of 248</span>
+                <button
+                  class="ctl"
+                  id="limitBtn"
+                  type="button"
+                  aria-label="Cycle row limit"
+                >
+                  10 / page
+                </button>
+                <button class="ctl" id="refreshBtn" type="button">
+                  ↻ refresh
+                </button>
+              </div>
+            </div>
+
+            <code
+              class="query-readout"
+              id="queryReadout"
+              aria-live="polite"
+            ></code>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================
+       5. KEYBOARD SHORTCUTS
+       ========================================================= -->
+      <section class="section wrap" aria-labelledby="keys-title">
+        <div class="section-head">
+          <div class="section-title">
+            <span class="section-num">02</span>
+            <h2 id="keys-title">Keyboard reference</h2>
+          </div>
+          <p>Everything is reachable without touching the mouse.</p>
+        </div>
+
+        <div class="shortcut-grid">
+          <div class="shortcut">
+            <div class="shortcut-keys"><kbd>Tab</kbd></div>
+            <span>Toggle focus between tables and rows</span>
+          </div>
+          <div class="shortcut">
+            <div class="shortcut-keys">
+              <kbd>j</kbd><span class="sep">/</span><kbd>↓</kbd>
+            </div>
+            <span>Move down</span>
+          </div>
+          <div class="shortcut">
+            <div class="shortcut-keys">
+              <kbd>k</kbd><span class="sep">/</span><kbd>↑</kbd>
+            </div>
+            <span>Move up</span>
+          </div>
+          <div class="shortcut">
+            <div class="shortcut-keys"><kbd>Enter</kbd></div>
+            <span>Select table</span>
+          </div>
+          <div class="shortcut">
+            <div class="shortcut-keys">
+              <kbd>h</kbd><span class="sep">/</span><kbd>Esc</kbd>
+            </div>
+            <span>Return to tables</span>
+          </div>
+          <div class="shortcut">
+            <div class="shortcut-keys">
+              <kbd>n</kbd><span class="sep">/</span><kbd>l</kbd
+              ><span class="sep">/</span><kbd>→</kbd>
+            </div>
+            <span>Next page</span>
+          </div>
+          <div class="shortcut">
+            <div class="shortcut-keys">
+              <kbd>p</kbd><span class="sep">/</span><kbd>←</kbd>
+            </div>
+            <span>Previous page</span>
+          </div>
+          <div class="shortcut">
+            <div class="shortcut-keys"><kbd>c</kbd></div>
+            <span>Cycle row limit</span>
+          </div>
+          <div class="shortcut">
+            <div class="shortcut-keys">
+              <kbd>q</kbd><span class="sep">/</span><kbd>Ctrl</kbd><kbd>C</kbd>
+            </div>
+            <span>Quit</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================
+       6. FEATURE HIGHLIGHTS
+       ========================================================= -->
+      <section class="section wrap" aria-labelledby="features-title">
+        <div class="section-head">
+          <div class="section-title">
+            <span class="section-num">03</span>
+            <h2 id="features-title">What it does</h2>
+          </div>
+          <p>Small surface area, sharp edges filed off.</p>
+        </div>
+
+        <div class="features">
+          <article class="feature">
+            <span class="feature-num">01</span>
+            <h3>Native SQLite integration</h3>
+            <p>
+              Reads <code>.db</code> files directly through a native binding. No
+              server, no import step, no schema copy — point it at a file and it
+              opens.
+            </p>
+          </article>
+          <article class="feature">
+            <span class="feature-num">02</span>
+            <h3>Gruvbox interface</h3>
+            <p>
+              Warm cream text on charcoal, with orange as the only accent. Tuned
+              for long sessions in a dim room.
+            </p>
+          </article>
+          <article class="feature">
+            <span class="feature-num">03</span>
+            <h3>Dual-pane navigation</h3>
+            <p>
+              Tables on the left, rows on the right. <kbd>Tab</kbd> moves focus
+              between panes so your hands never leave the home row.
+            </p>
+          </article>
+          <article class="feature">
+            <span class="feature-num">04</span>
+            <h3>Pagination &amp; row limits</h3>
+            <p>
+              Page through large tables with <code>LIMIT</code>/<code
+                >OFFSET</code
+              >
+              and cycle between 10, 25, and 50 rows per page with a single key.
+            </p>
+          </article>
+          <article class="feature">
+            <span class="feature-num">05</span>
+            <h3>Vim &amp; keyboard controls</h3>
+            <p>
+              <kbd>j</kbd><kbd>k</kbd> to move, <kbd>h</kbd><kbd>l</kbd> to
+              page, <kbd>Enter</kbd> to commit, <kbd>q</kbd> to leave. Mouse
+              support is optional, never required.
+            </p>
+          </article>
+          <article class="feature">
+            <span class="feature-num">06</span>
+            <h3>Responsive layout</h3>
+            <p>
+              The panes reflow for narrow terminals and split windows; wide
+              screens keep the dense, two-column view.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <!-- =========================================================
+       7. INSTALLATION & USAGE
+       ========================================================= -->
+      <section
+        class="section wrap"
+        id="install"
+        aria-labelledby="install-title"
+      >
+        <div class="section-head">
+          <div class="section-title">
+            <span class="section-num">04</span>
+            <h2 id="install-title">Installation &amp; usage</h2>
+          </div>
+          <p>Requires Node.js 18+ and pnpm.</p>
+        </div>
+
+        <div class="code-grid">
+          <div class="code-block">
+            <div class="code-head">
+              <span>setup</span>
+              <button
+                class="copy-btn"
+                type="button"
+                data-copy="git clone https://github.com/your-org/sqlite-viewer.git
+cd sqlite-viewer/cli
+pnpm install"
+              >
+                copy
+              </button>
+            </div>
+            <pre><code><span class="prompt">$</span> <span class="cmd">git clone https://github.com/your-org/sqlite-viewer.git</span>
+<span class="prompt">$</span> <span class="cmd">cd sqlite-viewer/cli</span>
+<span class="prompt">$</span> <span class="cmd">pnpm install</span></code></pre>
+          </div>
+
+          <div class="code-block">
+            <div class="code-head">
+              <span>usage</span>
+              <button
+                class="copy-btn"
+                type="button"
+                data-copy="pnpm run exe -- path/to/database.db
+pnpm run exe -- -f path/to/database.db"
+              >
+                copy
+              </button>
+            </div>
+            <pre><code><span class="cmt"># open a database by positional path</span>
+<span class="prompt">$</span> <span class="cmd">pnpm run exe -- path/to/database.db</span>
+
+<span class="cmt"># or pass it explicitly with --file</span>
+<span class="prompt">$</span> <span class="cmd">pnpm run exe -- -f path/to/database.db</span></code></pre>
+          </div>
+        </div>
+
+        <div class="options">
+          <div class="option-row">
+            <code>--file, -f &lt;path&gt;</code>
+            <span>Path to the SQLite database file to open.</span>
+          </div>
+          <div class="option-row">
+            <code>--help, -h</code>
+            <span>Print usage information and exit.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================
+       8. CODEBASE OVERVIEW
+       ========================================================= -->
+      <section class="section wrap" aria-labelledby="codebase-title">
+        <div class="section-head">
+          <div class="section-title">
+            <span class="section-num">05</span>
+            <h2 id="codebase-title">Codebase</h2>
+          </div>
+          <p>Five files do the heavy lifting.</p>
+        </div>
+
+        <div class="file-tree">
+          <div class="file-row">
+            <code><span class="tree">└─ </span>src/index.ts</code>
+            <span
+              >CLI entrypoint — parses argv, resolves the database path, mounts
+              the Ink app.</span
+            >
+          </div>
+          <div class="file-row">
+            <code><span class="tree">└─ </span>src/repl.tsx</code>
+            <span
+              >Ink render loop and global key handler; maps keystrokes to app
+              actions.</span
+            >
+          </div>
+          <div class="file-row">
+            <code><span class="tree">└─ </span>src/components/app.tsx</code>
+            <span
+              >Root component — owns selected table, page, focus zone, and row
+              limits.</span
+            >
+          </div>
+          <div class="file-row">
+            <code
+              ><span class="tree">└─ </span>src/components/ui/gruvbox.tsx</code
+            >
+            <span
+              >Palette constants and shared primitives: bordered boxes, badges,
+              key hints.</span
+            >
+          </div>
+          <div class="file-row">
+            <code><span class="tree">└─ </span>src/types/index.ts</code>
+            <span
+              >Shared types for tables, columns, rows, and pagination
+              state.</span
+            >
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- =========================================================
+     9. FOOTER
+     ========================================================= -->
+    <footer class="app-footer">
+      <div class="wrap footer-inner">
+        <div class="footer-left">
+          <span class="name">sqlite_viewer</span>
+          <span class="lic">ISC License</span>
+          <span>Built for curious database explorers.</span>
+        </div>
+        <nav class="footer-links" aria-label="Project links">
+          <a href="#" aria-disabled="true">GitHub</a>
+          <a href="#" aria-disabled="true">Docs</a>
+        </nav>
+      </div>
+    </footer>
+
+    <!-- Quit overlay (triggered by q / Ctrl+C) -->
+    <div
+      class="overlay"
+      id="quitOverlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="quitTitle"
+      hidden
+    >
+      <div class="overlay-box">
+        <h2 id="quitTitle">session ended</h2>
+        <p>
+          The viewer closed with <kbd>q</kbd>. Press any key or reconnect to
+          resume browsing.
+        </p>
+        <button class="btn btn-primary" id="reconnectBtn" type="button">
+          Reconnect
+        </button>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        "use strict";
+
+        /* =========================================================
+     MOCK DATA
+     Deterministic generators keep thousands of "rows" stable
+     across pages without allocating them all up front.
+     ========================================================= */
+        const T0 = Date.UTC(2024, 0, 1, 9, 0, 0);
+
+        function mulberry32(seed) {
+          return function () {
+            seed |= 0;
+            seed = (seed + 0x6d2b79f5) | 0;
+            let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+          };
+        }
+
+        const pick = (r, arr) => arr[Math.floor(r() * arr.length)];
+        const pad2 = (n) => String(n).padStart(2, "0");
+
+        function fmtDate(ts) {
+          const d = new Date(ts);
+          return (
+            d.getUTCFullYear() +
+            "-" +
+            pad2(d.getUTCMonth() + 1) +
+            "-" +
+            pad2(d.getUTCDate()) +
+            " " +
+            pad2(d.getUTCHours()) +
+            ":" +
+            pad2(d.getUTCMinutes()) +
+            ":" +
+            pad2(d.getUTCSeconds())
+          );
+        }
+
+        const FIRST = [
+          "ada",
+          "linus",
+          "grace",
+          "alan",
+          "barbara",
+          "edsger",
+          "margaret",
+          "dennis",
+          "ken",
+          "frances",
+          "donald",
+          "radia",
+          "guido",
+          "anita",
+          "bjarne",
+          "sophie",
+          "yukihiro",
+          "katherine",
+        ];
+        const LAST = [
+          "lovelace",
+          "torvalds",
+          "hopper",
+          "turing",
+          "liskov",
+          "dijkstra",
+          "hamilton",
+          "ritchie",
+          "thompson",
+          "allen",
+          "knuth",
+          "perlman",
+          "rossum",
+          "borg",
+          "stroustrup",
+          "wilson",
+          "matsumoto",
+          "johnson",
+        ];
+        const DOMAINS = [
+          "proton.me",
+          "fastmail.com",
+          "hey.com",
+          "gmail.com",
+          "outlook.com",
+          "mailbox.org",
+        ];
+        const USER_STATUS = [
+          "active",
+          "active",
+          "active",
+          "invited",
+          "pending",
+          "suspended",
+        ];
+
+        function makeUser(i) {
+          const r = mulberry32(9173 + i * 31);
+          const first = pick(r, FIRST);
+          const last = pick(r, LAST);
+          const username = (
+            first.charAt(0) +
+            last +
+            (10 + Math.floor(r() * 89))
+          ).toLowerCase();
+          const email = first + "." + last + "@" + pick(r, DOMAINS);
+          const created = T0 - Math.floor(r() * 90 * 24 * 3600 * 1000);
+          return {
+            id: i + 1,
+            username: username,
+            email: email,
+            created_at: fmtDate(created),
+            status: pick(r, USER_STATUS),
+          };
+        }
+
+        const POST_A = [
+          "Shipping",
+          "Debugging",
+          "Profiling",
+          "Refactoring",
+          "Streaming",
+          "Indexing",
+          "Caching",
+          "Migrating",
+          "Benchmarking",
+          "Wrapping",
+          "Splitting",
+          "Tuning",
+        ];
+        const POST_B = [
+          "WAL mode",
+          "query planners",
+          "edge runtimes",
+          "Ink components",
+          "cursor pagination",
+          "the Node REPL",
+          "B-tree indexes",
+          "typed rows",
+          "CLI ergonomics",
+          "partial indexes",
+          "JSON columns",
+          "vacuum runs",
+        ];
+        const POST_STATUS = [
+          "published",
+          "published",
+          "published",
+          "draft",
+          "archived",
+        ];
+
+        function makePost(i) {
+          const r = mulberry32(4207 + i * 17);
+          return {
+            id: i + 1,
+            title:
+              pick(r, POST_A) +
+              " " +
+              pick(r, POST_B) +
+              (r() > 0.5 ? " at scale" : ""),
+            author_id: Math.floor(r() * 248) + 1,
+            published_at: fmtDate(
+              T0 + Math.floor(r() * 120 * 24 * 3600 * 1000),
+            ),
+            views: Math.floor(r() * 48000),
+            status: pick(r, POST_STATUS),
+          };
+        }
+
+        function makeSession(i) {
+          const r = mulberry32(8803 + i * 23);
+          return {
+            id: i + 1,
+            user_id: Math.floor(r() * 248) + 1,
+            ip:
+              "10." +
+              Math.floor(r() * 255) +
+              "." +
+              Math.floor(r() * 255) +
+              "." +
+              Math.floor(r() * 255),
+            started_at: fmtDate(T0 + Math.floor(r() * 60 * 24 * 3600 * 1000)),
+            duration_ms: Math.floor(r() * 3600000),
+            status: r() > 0.45 ? "active" : "expired",
+          };
+        }
+
+        const EVENT_NAMES = [
+          "table.opened",
+          "query.executed",
+          "row.viewed",
+          "page.next",
+          "filter.applied",
+          "schema.loaded",
+          "export.started",
+          "error.locked",
+        ];
+        const EVENT_SOURCES = ["cli", "tui", "api", "worker"];
+
+        function makeEvent(i) {
+          const r = mulberry32(3319 + i * 13);
+          const roll = r();
+          return {
+            id: i + 1,
+            name: pick(r, EVENT_NAMES),
+            source: pick(r, EVENT_SOURCES),
+            created_at: fmtDate(T0 + Math.floor(r() * 30 * 24 * 3600 * 1000)),
+            size_bytes: Math.floor(r() * 9000),
+            status: roll > 0.9 ? "error" : roll > 0.75 ? "warn" : "ok",
+          };
+        }
+
+        const COL = {
+          id: { key: "id", label: "id", type: "num" },
+          username: { key: "username", label: "username", type: "text" },
+          email: { key: "email", label: "email", type: "text" },
+          created_at: { key: "created_at", label: "created_at", type: "date" },
+          status: { key: "status", label: "status", type: "badge" },
+          title: { key: "title", label: "title", type: "text" },
+          author_id: { key: "author_id", label: "author_id", type: "num" },
+          published_at: {
+            key: "published_at",
+            label: "published_at",
+            type: "date",
+          },
+          views: { key: "views", label: "views", type: "num" },
+          user_id: { key: "user_id", label: "user_id", type: "num" },
+          ip: { key: "ip", label: "ip", type: "text" },
+          started_at: { key: "started_at", label: "started_at", type: "date" },
+          duration_ms: {
+            key: "duration_ms",
+            label: "duration_ms",
+            type: "num",
+          },
+          name: { key: "name", label: "name", type: "text" },
+          source: { key: "source", label: "source", type: "text" },
+          size_bytes: { key: "size_bytes", label: "size_bytes", type: "num" },
+        };
+
+        const TABLES = [
+          {
+            name: "users",
+            description:
+              "Account records with profile metadata and lifecycle state.",
+            count: 248,
+            columns: [
+              COL.id,
+              COL.username,
+              COL.email,
+              COL.created_at,
+              COL.status,
+            ],
+            make: makeUser,
+          },
+          {
+            name: "posts",
+            description:
+              "Published and draft entries authored by registered users.",
+            count: 1024,
+            columns: [
+              COL.id,
+              COL.title,
+              COL.author_id,
+              COL.published_at,
+              COL.views,
+              COL.status,
+            ],
+            make: makePost,
+          },
+          {
+            name: "sessions",
+            description: "Authentication sessions with client IP and duration.",
+            count: 512,
+            columns: [
+              COL.id,
+              COL.user_id,
+              COL.ip,
+              COL.started_at,
+              COL.duration_ms,
+              COL.status,
+            ],
+            make: makeSession,
+          },
+          {
+            name: "events",
+            description:
+              "Append-only telemetry stream emitted by the viewer itself.",
+            count: 8974,
+            columns: [
+              COL.id,
+              COL.name,
+              COL.source,
+              COL.created_at,
+              COL.size_bytes,
+              COL.status,
+            ],
+            make: makeEvent,
+          },
+        ];
+
+        const BADGE_CLASS = {
+          active: "green",
+          invited: "blue",
+          pending: "yellow",
+          suspended: "red",
+          published: "green",
+          draft: "yellow",
+          archived: "gray",
+          expired: "gray",
+          ok: "green",
+          warn: "yellow",
+          error: "red",
+        };
+
+        /* =========================================================
+     STATE
+     ========================================================= */
+        const state = {
+          selected: "users", // name of the committed table
+          cursor: 0, // index within the filtered table list
+          filter: "",
+          focus: "tables", // 'tables' | 'rows'
+          rowCursor: 0, // index within the current page of rows
+          page: 1, // 1-based
+          pageSize: 10,
+          queryMs: 11,
+          refreshing: false,
+        };
+
+        const PAGE_SIZES = [10, 25, 50];
+
+        /* Cached element references */
+        const ui = {
+          sidebar: document.getElementById("sidebar"),
+          content: document.getElementById("content"),
+          tableList: document.getElementById("tableList"),
+          tableSearch: document.getElementById("tableSearch"),
+          tableCount: document.getElementById("tableCount"),
+          tableName: document.getElementById("tableName"),
+          tableDesc: document.getElementById("tableDesc"),
+          focusPill: document.getElementById("focusPill"),
+          metaRows: document.getElementById("metaRows"),
+          metaPage: document.getElementById("metaPage"),
+          metaDuration: document.getElementById("metaDuration"),
+          metaCols: document.getElementById("metaCols"),
+          metaOffset: document.getElementById("metaOffset"),
+          grid: document.getElementById("dataGrid"),
+          gridState: document.getElementById("gridState"),
+          gridWrap: document.getElementById("gridWrap"),
+          prevBtn: document.getElementById("prevBtn"),
+          nextBtn: document.getElementById("nextBtn"),
+          pageIndicator: document.getElementById("pageIndicator"),
+          rangeLabel: document.getElementById("rangeLabel"),
+          limitBtn: document.getElementById("limitBtn"),
+          refreshBtn: document.getElementById("refreshBtn"),
+          queryReadout: document.getElementById("queryReadout"),
+          connEl: document.getElementById("connEl"),
+          connLabel: document.getElementById("connLabel"),
+          dbPath: document.getElementById("dbPath"),
+          openDbBtn: document.getElementById("openDbBtn"),
+          loadSampleBtn: document.getElementById("loadSampleBtn"),
+          quitOverlay: document.getElementById("quitOverlay"),
+          reconnectBtn: document.getElementById("reconnectBtn"),
+        };
+
+        /* =========================================================
+     HELPERS
+     ========================================================= */
+        const esc = (s) =>
+          String(s).replace(
+            /[&<>"']/g,
+            (c) =>
+              ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;",
+              })[c],
+          );
+
+        const clamp = (n, min, max) => Math.min(Math.max(n, min), max);
+        const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+
+        function currentTable() {
+          return TABLES.find((t) => t.name === state.selected) || TABLES[0];
+        }
+
+        function filteredTables() {
+          const q = state.filter.trim().toLowerCase();
+          if (!q) return TABLES;
+          return TABLES.filter((t) => t.name.toLowerCase().indexOf(q) !== -1);
+        }
+
+        function totalPages(table) {
+          return Math.max(1, Math.ceil(table.count / state.pageSize));
+        }
+
+        function pageRows() {
+          const t = currentTable();
+          const start = (state.page - 1) * state.pageSize;
+          const end = Math.min(start + state.pageSize, t.count);
+          const rows = [];
+          for (let i = start; i < end; i++) rows.push(t.make(i));
+          return rows;
+        }
+
+        /* =========================================================
+     RENDER — sidebar
+     ========================================================= */
+        function renderSidebar() {
+          const list = filteredTables();
+
+          if (!list.length) {
+            ui.tableList.innerHTML =
+              '<li class="list-empty">no tables match “' +
+              esc(state.filter) +
+              "”<br>" +
+              "Clear the filter to see all 4 tables.</li>";
+          } else {
+            ui.tableList.innerHTML = list
+              .map((t, i) => {
+                const selected = t.name === state.selected;
+                const cursor = i === state.cursor;
+                return (
+                  "<li>" +
+                  '<button type="button" class="table-item' +
+                  (selected ? " is-selected" : "") +
+                  (cursor ? " is-cursor" : "") +
+                  '"' +
+                  ' data-table="' +
+                  t.name +
+                  '"' +
+                  ' aria-current="' +
+                  (selected ? "true" : "false") +
+                  '">' +
+                  '<span class="cursor-mark" aria-hidden="true">▸</span>' +
+                  '<span class="t-name">' +
+                  t.name +
+                  "</span>" +
+                  '<span class="t-rows">' +
+                  t.count.toLocaleString() +
+                  "</span>" +
+                  "</button></li>"
+                );
+              })
+              .join("");
+          }
+
+          ui.tableCount.textContent =
+            list.length + (list.length === 1 ? " table" : " tables");
+        }
+
+        /* Keep the cursor row visible inside the sidebar scroller */
+        function scrollSidebarCursor() {
+          const el = ui.tableList.querySelector(".is-cursor");
+          if (!el) return;
+          const top = el.offsetTop;
+          const bottom = top + el.offsetHeight;
+          if (top < ui.tableList.scrollTop) {
+            ui.tableList.scrollTop = top;
+          } else if (
+            bottom >
+            ui.tableList.scrollTop + ui.tableList.clientHeight
+          ) {
+            ui.tableList.scrollTop = bottom - ui.tableList.clientHeight;
+          }
+        }
+
+        /* =========================================================
+     RENDER — header / meta / focus
+     ========================================================= */
+        function renderHeaderMeta() {
+          const t = currentTable();
+          const pages = totalPages(t);
+          ui.tableName.textContent = t.name;
+          ui.tableDesc.textContent = t.description;
+          ui.metaRows.textContent = t.count.toLocaleString();
+          ui.metaPage.textContent = state.page + " / " + pages;
+          ui.metaDuration.textContent = state.queryMs + " ms";
+          ui.metaCols.textContent = t.columns.length;
+          ui.metaOffset.textContent = (state.page - 1) * state.pageSize;
+
+          ui.focusPill.innerHTML = "focus: <b>" + state.focus + "</b>";
+          ui.sidebar.classList.toggle("is-focused", state.focus === "tables");
+          ui.content.classList.toggle("is-focused", state.focus === "rows");
+        }
+
+        /* =========================================================
+     RENDER — data grid
+     ========================================================= */
+        function renderGrid() {
+          const t = currentTable();
+          const rows = pageRows();
+
+          let html =
+            '<caption class="sr-only">' +
+            esc(t.name) +
+            " table, page " +
+            state.page +
+            "</caption>";
+
+          html +=
+            "<thead><tr>" +
+            t.columns
+              .map(
+                (c) =>
+                  '<th scope="col"' +
+                  (c.type === "num" || c.type === "date"
+                    ? ' class="ta-r"'
+                    : "") +
+                  ">" +
+                  c.label +
+                  "</th>",
+              )
+              .join("") +
+            "</tr></thead>";
+
+          html += "<tbody>";
+          rows.forEach((row, idx) => {
+            const isCursor = state.focus === "rows" && idx === state.rowCursor;
+            html +=
+              "<tr" +
+              (isCursor ? ' class="is-cursor"' : "") +
+              ' data-row="' +
+              idx +
+              '">';
+            t.columns.forEach((c) => {
+              const v = row[c.key];
+              if (c.type === "num") {
+                html += '<td class="num">' + v + "</td>";
+              } else if (c.type === "date") {
+                html += '<td class="date">' + esc(v) + "</td>";
+              } else if (c.type === "badge") {
+                html +=
+                  '<td><span class="badge badge-' +
+                  (BADGE_CLASS[v] || "gray") +
+                  '">' +
+                  esc(v) +
+                  "</span></td>";
+              } else {
+                html += '<td title="' + esc(v) + '">' + esc(v) + "</td>";
+              }
+            });
+            html += "</tr>";
+          });
+          html += "</tbody>";
+
+          ui.grid.innerHTML = html;
+          ui.grid.hidden = false;
+          ui.gridState.hidden = true;
+
+          // Keep the row cursor inside the scroll viewport
+          if (state.focus === "rows") {
+            const cur = ui.grid.querySelector(".is-cursor");
+            if (cur && cur.scrollIntoView)
+              cur.scrollIntoView({ block: "nearest" });
+          }
+        }
+
+        /* =========================================================
+     RENDER — controls + query readout
+     ========================================================= */
+        function renderControls() {
+          const t = currentTable();
+          const pages = totalPages(t);
+          const start = (state.page - 1) * state.pageSize + 1;
+          const end = Math.min(state.page * state.pageSize, t.count);
+
+          ui.rangeLabel.textContent =
+            "Rows " + start + "–" + end + " of " + t.count.toLocaleString();
+          ui.pageIndicator.textContent = "page " + state.page + " / " + pages;
+          ui.prevBtn.disabled = state.page <= 1;
+          ui.nextBtn.disabled = state.page >= pages;
+          ui.limitBtn.textContent = state.pageSize + " / page";
+
+          const offset = (state.page - 1) * state.pageSize;
+          ui.queryReadout.innerHTML =
+            '<span class="q">SELECT * FROM "' +
+            t.name +
+            '" LIMIT ' +
+            state.pageSize +
+            " OFFSET " +
+            offset +
+            ";</span> " +
+            '<span class="ms">' +
+            state.queryMs +
+            " ms</span>";
+        }
+
+        function renderAll() {
+          renderSidebar();
+          renderHeaderMeta();
+          renderGrid();
+          renderControls();
+        }
+
+        /* =========================================================
+     LOADING / ERROR STATES
+     ========================================================= */
+        function showLoading(message) {
+          ui.grid.hidden = true;
+          ui.gridState.hidden = false;
+          ui.gridState.className = "grid-state";
+          ui.gridState.innerHTML =
+            '<p class="state-title">' +
+            esc(message) +
+            "</p>" +
+            '<div class="skeleton" aria-hidden="true">' +
+            "<span></span><span></span><span></span><span></span><span></span><span></span><span></span>" +
+            "</div>";
+        }
+
+        function showError(title, note) {
+          ui.grid.hidden = true;
+          ui.gridState.hidden = false;
+          ui.gridState.className = "grid-state is-error";
+          ui.gridState.innerHTML =
+            '<p class="state-title">' +
+            esc(title) +
+            "</p>" +
+            '<p class="state-note">' +
+            esc(note) +
+            "</p>" +
+            '<button class="ctl" type="button" id="retryBtn">retry query</button>';
+          const retry = document.getElementById("retryBtn");
+          if (retry)
+            retry.addEventListener("click", () => {
+              state.queryMs = 6 + Math.floor(Math.random() * 20);
+              renderGrid();
+              renderControls();
+              renderHeaderMeta();
+            });
+        }
+
+        function setConnection(mode, label) {
+          ui.connEl.classList.remove("is-loading", "is-error");
+          if (mode === "loading") ui.connEl.classList.add("is-loading");
+          if (mode === "error") ui.connEl.classList.add("is-error");
+          ui.connLabel.textContent = label;
+        }
+
+        /* =========================================================
+     ACTIONS
+     ========================================================= */
+        function selectTable(name) {
+          if (!TABLES.some((t) => t.name === name)) return;
+          if (state.selected === name) {
+            // Re-selecting still resets the paging cursor for predictability
+            state.page = 1;
+            state.rowCursor = 0;
+            renderAll();
+            return;
+          }
+          state.selected = name;
+          state.page = 1;
+          state.rowCursor = 0;
+          state.queryMs = 5 + Math.floor(Math.random() * 22);
+          renderAll();
+        }
+
+        function goToPage(page) {
+          const pages = totalPages(currentTable());
+          const next = clamp(page, 1, pages);
+          if (next === state.page) return;
+          state.page = next;
+          state.rowCursor = 0;
+          state.queryMs = 5 + Math.floor(Math.random() * 22);
+          renderAll();
+        }
+
+        function nextPage() {
+          goToPage(state.page + 1);
+        }
+        function prevPage() {
+          goToPage(state.page - 1);
+        }
+
+        function cyclePageSize() {
+          const i = PAGE_SIZES.indexOf(state.pageSize);
+          state.pageSize = PAGE_SIZES[(i + 1) % PAGE_SIZES.length];
+          state.page = 1;
+          state.rowCursor = 0;
+          renderAll();
+        }
+
+        function moveCursor(delta) {
+          if (state.focus === "tables") {
+            const list = filteredTables();
+            if (!list.length) return;
+            state.cursor = clamp(state.cursor + delta, 0, list.length - 1);
+            renderSidebar();
+            scrollSidebarCursor();
+            return;
+          }
+
+          // Rows pane: moving past a page boundary flips the page
+          const t = currentTable();
+          const rowsOnPage = Math.min(
+            state.pageSize,
+            t.count - (state.page - 1) * state.pageSize,
+          );
+          const next = state.rowCursor + delta;
+
+          if (next < 0) {
+            if (state.page > 1) {
+              state.page -= 1;
+              const prevRows = Math.min(
+                state.pageSize,
+                t.count - (state.page - 1) * state.pageSize,
+              );
+              state.rowCursor = prevRows - 1;
+              renderAll();
+            }
+            return;
+          }
+          if (next >= rowsOnPage) {
+            if (state.page < totalPages(t)) {
+              state.page += 1;
+              state.rowCursor = 0;
+              renderAll();
+            }
+            return;
+          }
+          state.rowCursor = next;
+          renderHeaderMeta();
+          renderGrid();
+        }
+
+        function setFocus(zone) {
+          if (state.focus === zone) return;
+          state.focus = zone;
+          renderHeaderMeta();
+          renderGrid();
+        }
+
+        function toggleFocus() {
+          setFocus(state.focus === "tables" ? "rows" : "tables");
+        }
+
+        function refresh() {
+          if (state.refreshing) return;
+          state.refreshing = true;
+          state.queryMs = 6 + Math.floor(Math.random() * 22);
+
+          // Simulated SQLITE_BUSY — demonstrates the error state
+          if (Math.random() < 0.12) {
+            showError(
+              "SQLITE_BUSY: database is locked",
+              "Another connection is writing to analytics.db. Wait a moment, then retry the query.",
+            );
+            setConnection("error", "locked");
+            setTimeout(() => setConnection("ok", "connected"), 1800);
+            state.refreshing = false;
+            return;
+          }
+
+          renderGrid();
+          renderControls();
+          renderHeaderMeta();
+          state.refreshing = false;
+        }
+
+        /* Simulated "open database" / "load sample" flow with a loading state */
+        async function loadDatabase(label) {
+          setConnection("loading", "reading schema…");
+          ui.openDbBtn.disabled = true;
+          ui.loadSampleBtn.disabled = true;
+          showLoading(label);
+
+          await sleep(620);
+
+          state.selected = "users";
+          state.cursor = 0;
+          state.page = 1;
+          state.rowCursor = 0;
+          state.filter = "";
+          state.queryMs = 9 + Math.floor(Math.random() * 14);
+          ui.tableSearch.value = "";
+
+          setConnection("ok", "connected");
+          ui.openDbBtn.disabled = false;
+          ui.loadSampleBtn.disabled = false;
+          renderAll();
+        }
+
+        /* Quit overlay */
+        function quit() {
+          ui.quitOverlay.hidden = false;
+          if (ui.reconnectBtn) ui.reconnectBtn.focus();
+        }
+        function reconnect() {
+          ui.quitOverlay.hidden = true;
+          renderAll();
+        }
+
+        /* =========================================================
+     EVENTS — mouse / input
+     ========================================================= */
+        ui.tableList.addEventListener("click", (e) => {
+          const btn = e.target.closest(".table-item");
+          if (!btn) return;
+          const name = btn.dataset.table;
+          const list = filteredTables();
+          state.cursor = Math.max(
+            0,
+            list.findIndex((t) => t.name === name),
+          );
+          state.focus = "tables";
+          selectTable(name);
+          scrollSidebarCursor();
+        });
+
+        ui.tableSearch.addEventListener("input", (e) => {
+          state.filter = e.target.value;
+          state.cursor = 0;
+          renderSidebar();
+          scrollSidebarCursor();
+        });
+
+        ui.prevBtn.addEventListener("click", prevPage);
+        ui.nextBtn.addEventListener("click", nextPage);
+        ui.limitBtn.addEventListener("click", cyclePageSize);
+        ui.refreshBtn.addEventListener("click", refresh);
+
+        ui.openDbBtn.addEventListener("click", () =>
+          loadDatabase("opening ~/data/analytics.db…"),
+        );
+        ui.loadSampleBtn.addEventListener("click", () =>
+          loadDatabase("loading sample database…"),
+        );
+
+        ui.reconnectBtn.addEventListener("click", reconnect);
+        ui.quitOverlay.addEventListener("click", (e) => {
+          if (e.target === ui.quitOverlay) reconnect();
+        });
+
+        // Clicking a grid row moves the row cursor there
+        ui.grid.addEventListener("click", (e) => {
+          const tr = e.target.closest("tr[data-row]");
+          if (!tr) return;
+          state.focus = "rows";
+          state.rowCursor = Number(tr.dataset.row);
+          renderHeaderMeta();
+          renderGrid();
+        });
+
+        // Copy buttons in code blocks
+        document.querySelectorAll(".copy-btn").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const text = btn.getAttribute("data-copy") || "";
+            const original = btn.textContent;
+            try {
+              await navigator.clipboard.writeText(text);
+              btn.textContent = "copied";
+            } catch (err) {
+              btn.textContent = "select manually";
+            }
+            setTimeout(() => {
+              btn.textContent = original;
+            }, 1400);
+          });
+        });
+
+        /* =========================================================
+     EVENTS — keyboard
+     ========================================================= */
+        document.addEventListener("keydown", (e) => {
+          // 1) Quit overlay swallows everything
+          if (!ui.quitOverlay.hidden) {
+            e.preventDefault();
+            reconnect();
+            return;
+          }
+
+          const active = document.activeElement;
+          const inField =
+            active &&
+            (active.tagName === "INPUT" || active.tagName === "TEXTAREA");
+
+          // Ctrl+C → quit (unless the user is copying selected text)
+          if (e.ctrlKey && e.key.toLowerCase() === "c") {
+            const sel = window.getSelection
+              ? String(window.getSelection())
+              : "";
+            if (!sel) {
+              e.preventDefault();
+              quit();
+            }
+            return;
+          }
+
+          // While typing in the filter field only Escape is intercepted
+          if (inField) {
+            if (e.key === "Escape") {
+              e.preventDefault();
+              active.blur();
+              setFocus("tables");
+            }
+            return;
+          }
+
+          const key = e.key;
+
+          switch (key) {
+            case "Tab": {
+              // Only hijack Tab once focus is inside the workspace
+              const inWorkspace =
+                ui.sidebar.contains(active) ||
+                ui.content.contains(active) ||
+                active === document.body ||
+                active === null;
+              if (inWorkspace) {
+                e.preventDefault();
+                toggleFocus();
+              }
+              break;
+            }
+            case "j":
+            case "ArrowDown":
+              e.preventDefault();
+              moveCursor(1);
+              break;
+            case "k":
+            case "ArrowUp":
+              e.preventDefault();
+              moveCursor(-1);
+              break;
+            case "Enter": {
+              if (state.focus === "tables") {
+                const list = filteredTables();
+                const t = list[state.cursor];
+                if (t) {
+                  e.preventDefault();
+                  selectTable(t.name);
+                }
+              }
+              break;
+            }
+            case "h":
+            case "Escape":
+              e.preventDefault();
+              setFocus("tables");
+              break;
+            case "n":
+            case "l":
+            case "ArrowRight":
+              e.preventDefault();
+              nextPage();
+              break;
+            case "p":
+            case "ArrowLeft":
+              e.preventDefault();
+              prevPage();
+              break;
+            case "c":
+              e.preventDefault();
+              cyclePageSize();
+              break;
+            case "q":
+              e.preventDefault();
+              quit();
+              break;
+            case "/":
+              e.preventDefault();
+              ui.tableSearch.focus();
+              ui.tableSearch.select();
+              break;
+            default:
+              break;
+          }
+        });
+
+        /* =========================================================
+     BOOT
+     ========================================================= */
+        setConnection("ok", "connected");
+        renderAll();
+      })();
+    </script>
+  </body>
+</html>
