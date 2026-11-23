@@ -40,16 +40,16 @@ function fetchPage(
 function useTerminalDimensions() {
   const { stdout } = useStdout();
   const [size, setSize] = useState({
-    columns: stdout?.columns || 80,
-    rows: stdout?.rows || 24,
+    columns: (stdout as any)?.columns || 80,
+    rows: (stdout as any)?.rows || 24,
   });
 
   useEffect(() => {
     if (!stdout) return;
     const handleResize = () => {
       setSize({
-        columns: stdout.columns || 80,
-        rows: stdout.rows || 24,
+        columns: (stdout as any).columns || 80,
+        rows: (stdout as any).rows || 24,
       });
     };
     stdout.on("resize", handleResize);
