@@ -1,5 +1,5 @@
 {
-  "name": "sqlite-cli",
+  "name": "@_dnyaneshwar07/sqlite-cli",
   "version": "1.0.0",
   "description": "Full-screen Gruvbox SQLite TUI for Node.js",
   "main": "./dist/index.js",
