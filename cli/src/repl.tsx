@@ -3,7 +3,6 @@ import Main from "./components/main.js";
 import { DatabaseSync } from "node:sqlite";
 import { TableEntry } from "./types/index.js";
 
-// Alternate screen + cursor control (nvim-style full-terminal takeover)
 const ALT_ON = "\x1b[?1049h";
 const ALT_OFF = "\x1b[?1049l";
 const CURSOR_HIDE = "\x1b[?25l";

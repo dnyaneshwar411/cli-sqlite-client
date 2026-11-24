@@ -191,7 +191,7 @@
 
       .wrap {
         width: 100%;
-        max-width: 1180px;
+        max-width: 980px;
         margin: 0 auto;
         padding: 0 24px;
       }
@@ -312,7 +312,7 @@
         gap: 20px;
         flex-wrap: wrap;
         padding: 12px 24px;
-        max-width: 1180px;
+        max-width: 980px;
         margin: 0 auto;
       }
 
@@ -527,7 +527,7 @@
      ========================================================= */
       .browser {
         display: grid;
-        grid-template-columns: 244px minmax(0, 1fr);
+        grid-template-columns: 212px minmax(0, 1fr);
         border: 1px solid var(--line-strong);
         border-radius: var(--radius);
         background: var(--bg);
@@ -647,15 +647,11 @@
         border: 1px solid transparent;
         border-left: 2px solid transparent;
         border-radius: var(--radius);
-        cursor: pointer;
+        cursor: default;
         transition:
           background-color 0.1s ease,
           color 0.1s ease,
           border-color 0.1s ease;
-      }
-      .table-item:hover {
-        background: var(--surface);
-        color: var(--fg);
       }
       .table-item:focus-visible {
         outline: 2px solid var(--orange);
@@ -735,6 +731,11 @@
         justify-content: space-between;
         gap: 14px;
         padding: 14px 16px 12px;
+      }
+
+      /* Match the CLI: query metadata begins the content pane. */
+      .content-head {
+        display: none;
       }
 
       .content-eyebrow {
@@ -854,9 +855,6 @@
 
       .data-grid tbody tr {
         transition: background-color 0.08s ease;
-      }
-      .data-grid tbody tr:hover {
-        background: var(--surface);
       }
       .data-grid tbody tr.is-cursor {
         background: var(--orange-soft);
@@ -983,6 +981,17 @@
         padding: 9px 14px;
         border-top: 1px solid var(--line-strong);
         background: var(--bg-alt);
+      }
+
+      /* ---- package manager toggle ---- */
+      .pkg-toggle {
+        font-size: 12px;
+        padding: 4px 12px;
+      }
+      .pkg-toggle.is-active {
+        color: var(--orange);
+        border-color: var(--orange);
+        background: var(--orange-soft);
       }
 
       .pager {
@@ -1459,12 +1468,6 @@
           <a class="btn" href="#install">Installation</a>
         </div>
 
-        <ul class="stack-list" aria-label="Built with">
-          <li>Node.js</li>
-          <li>SQLite</li>
-          <li>React</li>
-          <li>Ink</li>
-        </ul>
       </section>
 
       <!-- =========================================================
@@ -1564,40 +1567,34 @@
             <!-- ---------- 4. data grid controls ---------- -->
             <div class="grid-controls">
               <div class="pager">
-                <button
+                <span
                   class="ctl"
                   id="prevBtn"
-                  type="button"
-                  aria-label="Previous page"
                 >
                   ← prev
-                </button>
+                </span>
                 <span class="page-indicator" id="pageIndicator"
                   >page 1 / 25</span
                 >
-                <button
+                <span
                   class="ctl"
                   id="nextBtn"
-                  type="button"
-                  aria-label="Next page"
                 >
                   next →
-                </button>
+                </span>
               </div>
 
               <div class="controls-right">
                 <span class="range" id="rangeLabel">Rows 1–10 of 248</span>
-                <button
+                <span
                   class="ctl"
                   id="limitBtn"
-                  type="button"
-                  aria-label="Cycle row limit"
                 >
                   10 / page
-                </button>
-                <button class="ctl" id="refreshBtn" type="button">
+                </span>
+                <span class="ctl" id="refreshBtn">
                   ↻ refresh
-                </button>
+                </span>
               </div>
             </div>
 
@@ -1624,47 +1621,62 @@
 
         <div class="shortcut-grid">
           <div class="shortcut">
+            <div class="shortcut-keys"><kbd>Shift</kbd><kbd>1</kbd></div>
+            <span>Focus sidebar (pane 1)</span>
+          </div>
+          <div class="shortcut">
+            <div class="shortcut-keys"><kbd>Shift</kbd><kbd>2</kbd></div>
+            <span>Focus query pane (pane 2)</span>
+          </div>
+          <div class="shortcut">
             <div class="shortcut-keys"><kbd>Tab</kbd></div>
-            <span>Toggle focus between tables and rows</span>
+            <span>Toggle between grid and pagination</span>
           </div>
           <div class="shortcut">
             <div class="shortcut-keys">
               <kbd>j</kbd><span class="sep">/</span><kbd>↓</kbd>
             </div>
-            <span>Move down</span>
+            <span>Move cursor down</span>
           </div>
           <div class="shortcut">
             <div class="shortcut-keys">
               <kbd>k</kbd><span class="sep">/</span><kbd>↑</kbd>
             </div>
-            <span>Move up</span>
+            <span>Move cursor up</span>
           </div>
           <div class="shortcut">
             <div class="shortcut-keys"><kbd>Enter</kbd></div>
-            <span>Select table</span>
+            <span>Select / commit table</span>
           </div>
           <div class="shortcut">
-            <div class="shortcut-keys">
-              <kbd>h</kbd><span class="sep">/</span><kbd>Esc</kbd>
-            </div>
-            <span>Return to tables</span>
+            <div class="shortcut-keys"><kbd>/</kbd></div>
+            <span>Focus filter input</span>
           </div>
           <div class="shortcut">
-            <div class="shortcut-keys">
-              <kbd>n</kbd><span class="sep">/</span><kbd>l</kbd
-              ><span class="sep">/</span><kbd>→</kbd>
-            </div>
+            <div class="shortcut-keys"><kbd>Esc</kbd></div>
+            <span>Exit filter / return to browse</span>
+          </div>
+          <div class="shortcut">
+            <div class="shortcut-keys"><kbd>n</kbd></div>
             <span>Next page</span>
           </div>
           <div class="shortcut">
-            <div class="shortcut-keys">
-              <kbd>p</kbd><span class="sep">/</span><kbd>←</kbd>
-            </div>
+            <div class="shortcut-keys"><kbd>p</kbd></div>
             <span>Previous page</span>
           </div>
           <div class="shortcut">
-            <div class="shortcut-keys"><kbd>c</kbd></div>
-            <span>Cycle row limit</span>
+            <div class="shortcut-keys">
+              <kbd>h</kbd><span class="sep">/</span><kbd>l</kbd>
+            </div>
+            <span>Navigate pagination controls (←/→)</span>
+          </div>
+          <div class="shortcut">
+            <div class="shortcut-keys"><kbd>g</kbd><kbd>g</kbd></div>
+            <span>Jump to first row</span>
+          </div>
+          <div class="shortcut">
+            <div class="shortcut-keys"><kbd>G</kbd></div>
+            <span>Jump to last row</span>
           </div>
           <div class="shortcut">
             <div class="shortcut-keys">
@@ -1672,74 +1684,6 @@
             </div>
             <span>Quit</span>
           </div>
-        </div>
-      </section>
-
-      <!-- =========================================================
-       6. FEATURE HIGHLIGHTS
-       ========================================================= -->
-      <section class="section wrap" aria-labelledby="features-title">
-        <div class="section-head">
-          <div class="section-title">
-            <span class="section-num">03</span>
-            <h2 id="features-title">What it does</h2>
-          </div>
-          <p>Small surface area, sharp edges filed off.</p>
-        </div>
-
-        <div class="features">
-          <article class="feature">
-            <span class="feature-num">01</span>
-            <h3>Native SQLite integration</h3>
-            <p>
-              Reads <code>.db</code> files directly through a native binding. No
-              server, no import step, no schema copy — point it at a file and it
-              opens.
-            </p>
-          </article>
-          <article class="feature">
-            <span class="feature-num">02</span>
-            <h3>Gruvbox interface</h3>
-            <p>
-              Warm cream text on charcoal, with orange as the only accent. Tuned
-              for long sessions in a dim room.
-            </p>
-          </article>
-          <article class="feature">
-            <span class="feature-num">03</span>
-            <h3>Dual-pane navigation</h3>
-            <p>
-              Tables on the left, rows on the right. <kbd>Tab</kbd> moves focus
-              between panes so your hands never leave the home row.
-            </p>
-          </article>
-          <article class="feature">
-            <span class="feature-num">04</span>
-            <h3>Pagination &amp; row limits</h3>
-            <p>
-              Page through large tables with <code>LIMIT</code>/<code
-                >OFFSET</code
-              >
-              and cycle between 10, 25, and 50 rows per page with a single key.
-            </p>
-          </article>
-          <article class="feature">
-            <span class="feature-num">05</span>
-            <h3>Vim &amp; keyboard controls</h3>
-            <p>
-              <kbd>j</kbd><kbd>k</kbd> to move, <kbd>h</kbd><kbd>l</kbd> to
-              page, <kbd>Enter</kbd> to commit, <kbd>q</kbd> to leave. Mouse
-              support is optional, never required.
-            </p>
-          </article>
-          <article class="feature">
-            <span class="feature-num">06</span>
-            <h3>Responsive layout</h3>
-            <p>
-              The panes reflow for narrow terminals and split windows; wide
-              screens keep the dense, two-column view.
-            </p>
-          </article>
         </div>
       </section>
 
@@ -1753,29 +1697,51 @@
       >
         <div class="section-head">
           <div class="section-title">
-            <span class="section-num">04</span>
+            <span class="section-num">03</span>
             <h2 id="install-title">Installation &amp; usage</h2>
           </div>
-          <p>Requires Node.js 18+ and pnpm.</p>
+          <p>Requires Node.js 22.5+.</p>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+          <button class="ctl pkg-toggle is-active" id="pkgNpm" type="button" data-pkg="npm">npm</button>
+          <button class="ctl pkg-toggle" id="pkgPnpm" type="button" data-pkg="pnpm">pnpm</button>
         </div>
 
         <div class="code-grid">
+          <div class="code-block">
+            <div class="code-head">
+              <span>run without installing</span>
+              <button
+                class="copy-btn"
+                type="button"
+                id="copyNoInstall"
+                data-copy="npx sqlite-cli path/to/database.db"
+              >
+                copy
+              </button>
+            </div>
+            <pre><code id="noInstallCode"><span class="cmt"># run directly without installing</span>
+<span class="prompt">$</span> <span class="cmd">npx sqlite-cli path/to/database.db</span></code></pre>
+          </div>
+
           <div class="code-block">
             <div class="code-head">
               <span>setup</span>
               <button
                 class="copy-btn"
                 type="button"
+                id="copySetup"
                 data-copy="git clone https://github.com/dnyaneshwar411/cli-sqlite-client
 cd sqlite-viewer/cli
-pnpm install"
+npm install"
               >
                 copy
               </button>
             </div>
-            <pre><code><span class="prompt">$</span> <span class="cmd">git clone https://github.com/dnyaneshwar411/cli-sqlite-client</span>
+            <pre><code id="setupCode"><span class="prompt">$</span> <span class="cmd">git clone https://github.com/dnyaneshwar411/cli-sqlite-client</span>
 <span class="prompt">$</span> <span class="cmd">cd sqlite-viewer/cli</span>
-<span class="prompt">$</span> <span class="cmd">pnpm install</span></code></pre>
+<span class="prompt">$</span> <span class="cmd">npm install</span></code></pre>
           </div>
 
           <div class="code-block">
@@ -1784,17 +1750,18 @@ pnpm install"
               <button
                 class="copy-btn"
                 type="button"
-                data-copy="pnpm run exe -- path/to/database.db
-pnpm run exe -- -f path/to/database.db"
+                id="copyUsage"
+                data-copy="npm run exe -- path/to/database.db
+npm run exe -- -f path/to/database.db"
               >
                 copy
               </button>
             </div>
-            <pre><code><span class="cmt"># open a database by positional path</span>
-<span class="prompt">$</span> <span class="cmd">pnpm run exe -- path/to/database.db</span>
+            <pre><code id="usageCode"><span class="cmt"># open a database by positional path</span>
+<span class="prompt">$</span> <span class="cmd">npm run exe -- path/to/database.db</span>
 
 <span class="cmt"># or pass it explicitly with --file</span>
-<span class="prompt">$</span> <span class="cmd">pnpm run exe -- -f path/to/database.db</span></code></pre>
+<span class="prompt">$</span> <span class="cmd">npm run exe -- -f path/to/database.db</span></code></pre>
           </div>
         </div>
 
@@ -1810,58 +1777,6 @@ pnpm run exe -- -f path/to/database.db"
         </div>
       </section>
 
-      <!-- =========================================================
-       8. CODEBASE OVERVIEW
-       ========================================================= -->
-      <section class="section wrap" aria-labelledby="codebase-title">
-        <div class="section-head">
-          <div class="section-title">
-            <span class="section-num">05</span>
-            <h2 id="codebase-title">Codebase</h2>
-          </div>
-          <p>Five files do the heavy lifting.</p>
-        </div>
-
-        <div class="file-tree">
-          <div class="file-row">
-            <code><span class="tree">└─ </span>src/index.ts</code>
-            <span
-              >CLI entrypoint — parses argv, resolves the database path, mounts
-              the Ink app.</span
-            >
-          </div>
-          <div class="file-row">
-            <code><span class="tree">└─ </span>src/repl.tsx</code>
-            <span
-              >Ink render loop and global key handler; maps keystrokes to app
-              actions.</span
-            >
-          </div>
-          <div class="file-row">
-            <code><span class="tree">└─ </span>src/components/app.tsx</code>
-            <span
-              >Root component — owns selected table, page, focus zone, and row
-              limits.</span
-            >
-          </div>
-          <div class="file-row">
-            <code
-              ><span class="tree">└─ </span>src/components/ui/gruvbox.tsx</code
-            >
-            <span
-              >Palette constants and shared primitives: bordered boxes, badges,
-              key hints.</span
-            >
-          </div>
-          <div class="file-row">
-            <code><span class="tree">└─ </span>src/types/index.ts</code>
-            <span
-              >Shared types for tables, columns, rows, and pagination
-              state.</span
-            >
-          </div>
-        </div>
-      </section>
     </main>
 
     <!-- =========================================================
@@ -1876,7 +1791,6 @@ pnpm run exe -- -f path/to/database.db"
         </div>
         <nav class="footer-links" aria-label="Project links">
           <a href="https://github.com/dnyaneshwar411/cli-sqlite-client" target="_blank" aria-disabled="true">GitHub</a>
-          <a href="#" aria-disabled="true">Docs</a>
         </nav>
       </div>
     </footer>
@@ -2331,7 +2245,7 @@ pnpm run exe -- -f path/to/database.db"
                 const cursor = i === state.cursor;
                 return (
                   "<li>" +
-                  '<button type="button" class="table-item' +
+                  '<div class="table-item' +
                   (selected ? " is-selected" : "") +
                   (cursor ? " is-cursor" : "") +
                   '"' +
@@ -2348,7 +2262,7 @@ pnpm run exe -- -f path/to/database.db"
                   '<span class="t-rows">' +
                   t.count.toLocaleString() +
                   "</span>" +
-                  "</button></li>"
+                  "</div></li>"
                 );
               })
               .join("");
@@ -2702,33 +2616,14 @@ pnpm run exe -- -f path/to/database.db"
         }
 
         /* =========================================================
-     EVENTS — mouse / input
+     EVENTS — input (keyboard-only workspace, no clicks)
      ========================================================= */
-        ui.tableList.addEventListener("click", (e) => {
-          const btn = e.target.closest(".table-item");
-          if (!btn) return;
-          const name = btn.dataset.table;
-          const list = filteredTables();
-          state.cursor = Math.max(
-            0,
-            list.findIndex((t) => t.name === name),
-          );
-          state.focus = "tables";
-          selectTable(name);
-          scrollSidebarCursor();
-        });
-
         ui.tableSearch.addEventListener("input", (e) => {
           state.filter = e.target.value;
           state.cursor = 0;
           renderSidebar();
           scrollSidebarCursor();
         });
-
-        ui.prevBtn.addEventListener("click", prevPage);
-        ui.nextBtn.addEventListener("click", nextPage);
-        ui.limitBtn.addEventListener("click", cyclePageSize);
-        ui.refreshBtn.addEventListener("click", refresh);
 
         ui.openDbBtn.addEventListener("click", () =>
           loadDatabase("opening ~/data/analytics.db…"),
@@ -2740,16 +2635,6 @@ pnpm run exe -- -f path/to/database.db"
         ui.reconnectBtn.addEventListener("click", reconnect);
         ui.quitOverlay.addEventListener("click", (e) => {
           if (e.target === ui.quitOverlay) reconnect();
-        });
-
-        // Clicking a grid row moves the row cursor there
-        ui.grid.addEventListener("click", (e) => {
-          const tr = e.target.closest("tr[data-row]");
-          if (!tr) return;
-          state.focus = "rows";
-          state.rowCursor = Number(tr.dataset.row);
-          renderHeaderMeta();
-          renderGrid();
         });
 
         // Copy buttons in code blocks
@@ -2772,6 +2657,11 @@ pnpm run exe -- -f path/to/database.db"
         /* =========================================================
      EVENTS — keyboard
      ========================================================= */
+        /* =========================================================
+     EVENTS — keyboard (terminal-faithful bindings)
+     ========================================================= */
+        let pendingG = null;
+
         document.addEventListener("keydown", (e) => {
           // 1) Quit overlay swallows everything
           if (!ui.quitOverlay.hidden) {
@@ -2797,10 +2687,18 @@ pnpm run exe -- -f path/to/database.db"
             return;
           }
 
-          // While typing in the filter field only Escape is intercepted
+          // While typing in the filter field only Escape & Enter are intercepted
           if (inField) {
             if (e.key === "Escape") {
               e.preventDefault();
+              active.blur();
+              setFocus("tables");
+            }
+            if (e.key === "Enter") {
+              e.preventDefault();
+              const list = filteredTables();
+              const t = list[state.cursor];
+              if (t) selectTable(t.name);
               active.blur();
               setFocus("tables");
             }
@@ -2809,9 +2707,22 @@ pnpm run exe -- -f path/to/database.db"
 
           const key = e.key;
 
+          // Shift+1 (!) → focus sidebar
+          if (key === "!" || key === "1") {
+            e.preventDefault();
+            setFocus("tables");
+            return;
+          }
+          // Shift+2 (@) → focus query pane
+          if (key === "@" || key === "2") {
+            e.preventDefault();
+            setFocus("rows");
+            return;
+          }
+
           switch (key) {
             case "Tab": {
-              // Only hijack Tab once focus is inside the workspace
+              // In the terminal, Tab toggles between grid and pagination sub-panes
               const inWorkspace =
                 ui.sidebar.contains(active) ||
                 ui.content.contains(active) ||
@@ -2833,6 +2744,37 @@ pnpm run exe -- -f path/to/database.db"
               e.preventDefault();
               moveCursor(-1);
               break;
+            case "G":
+              // Jump to last row (like Vim)
+              if (state.focus === "rows") {
+                e.preventDefault();
+                const t = currentTable();
+                const rowsOnPage = Math.min(
+                  state.pageSize,
+                  t.count - (state.page - 1) * state.pageSize,
+                );
+                state.rowCursor = Math.max(0, rowsOnPage - 1);
+                renderHeaderMeta();
+                renderGrid();
+              }
+              break;
+            case "g":
+              // gg → jump to first row (like Vim)
+              if (state.focus === "rows") {
+                e.preventDefault();
+                if (pendingG) {
+                  clearTimeout(pendingG);
+                  pendingG = null;
+                  state.rowCursor = 0;
+                  renderHeaderMeta();
+                  renderGrid();
+                } else {
+                  pendingG = setTimeout(() => {
+                    pendingG = null;
+                  }, 500);
+                }
+              }
+              break;
             case "Enter": {
               if (state.focus === "tables") {
                 const list = filteredTables();
@@ -2844,25 +2786,28 @@ pnpm run exe -- -f path/to/database.db"
               }
               break;
             }
-            case "h":
             case "Escape":
               e.preventDefault();
               setFocus("tables");
               break;
             case "n":
-            case "l":
-            case "ArrowRight":
               e.preventDefault();
               nextPage();
               break;
             case "p":
-            case "ArrowLeft":
               e.preventDefault();
               prevPage();
               break;
-            case "c":
+            case "h":
+            case "ArrowLeft":
               e.preventDefault();
-              cyclePageSize();
+              if (state.focus === "rows") prevPage();
+              else setFocus("tables");
+              break;
+            case "l":
+            case "ArrowRight":
+              e.preventDefault();
+              if (state.focus === "rows") nextPage();
               break;
             case "q":
               e.preventDefault();
@@ -2870,6 +2815,7 @@ pnpm run exe -- -f path/to/database.db"
               break;
             case "/":
               e.preventDefault();
+              setFocus("tables");
               ui.tableSearch.focus();
               ui.tableSearch.select();
               break;
@@ -2877,6 +2823,56 @@ pnpm run exe -- -f path/to/database.db"
               break;
           }
         });
+
+        /* =========================================================
+     PACKAGE MANAGER TOGGLE
+     ========================================================= */
+        const PKG_CONTENT = {
+          npm: {
+            noInstall: {
+              code: '<span class="cmt"># run directly without installing</span>\n<span class="prompt">$</span> <span class="cmd">npx sqlite-cli path/to/database.db</span>',
+              copy: "npx sqlite-cli path/to/database.db",
+            },
+            setup: {
+              code: '<span class="prompt">$</span> <span class="cmd">git clone https://github.com/dnyaneshwar411/cli-sqlite-client</span>\n<span class="prompt">$</span> <span class="cmd">cd sqlite-viewer/cli</span>\n<span class="prompt">$</span> <span class="cmd">npm install</span>',
+              copy: "git clone https://github.com/dnyaneshwar411/cli-sqlite-client\ncd sqlite-viewer/cli\nnpm install",
+            },
+            usage: {
+              code: '<span class="cmt"># open a database by positional path</span>\n<span class="prompt">$</span> <span class="cmd">npm run exe -- path/to/database.db</span>\n\n<span class="cmt"># or pass it explicitly with --file</span>\n<span class="prompt">$</span> <span class="cmd">npm run exe -- -f path/to/database.db</span>',
+              copy: "npm run exe -- path/to/database.db\nnpm run exe -- -f path/to/database.db",
+            },
+          },
+          pnpm: {
+            noInstall: {
+              code: '<span class="cmt"># run directly without installing</span>\n<span class="prompt">$</span> <span class="cmd">pnpm dlx sqlite-cli path/to/database.db</span>',
+              copy: "pnpm dlx sqlite-cli path/to/database.db",
+            },
+            setup: {
+              code: '<span class="prompt">$</span> <span class="cmd">git clone https://github.com/dnyaneshwar411/cli-sqlite-client</span>\n<span class="prompt">$</span> <span class="cmd">cd sqlite-viewer/cli</span>\n<span class="prompt">$</span> <span class="cmd">pnpm install</span>',
+              copy: "git clone https://github.com/dnyaneshwar411/cli-sqlite-client\ncd sqlite-viewer/cli\npnpm install",
+            },
+            usage: {
+              code: '<span class="cmt"># open a database by positional path</span>\n<span class="prompt">$</span> <span class="cmd">pnpm run exe -- path/to/database.db</span>\n\n<span class="cmt"># or pass it explicitly with --file</span>\n<span class="prompt">$</span> <span class="cmd">pnpm run exe -- -f path/to/database.db</span>',
+              copy: "pnpm run exe -- path/to/database.db\npnpm run exe -- -f path/to/database.db",
+            },
+          },
+        };
+
+        function switchPkg(pkg) {
+          const data = PKG_CONTENT[pkg];
+          document.getElementById("noInstallCode").innerHTML = data.noInstall.code;
+          document.getElementById("copyNoInstall").setAttribute("data-copy", data.noInstall.copy);
+          document.getElementById("setupCode").innerHTML = data.setup.code;
+          document.getElementById("copySetup").setAttribute("data-copy", data.setup.copy);
+          document.getElementById("usageCode").innerHTML = data.usage.code;
+          document.getElementById("copyUsage").setAttribute("data-copy", data.usage.copy);
+          document.querySelectorAll(".pkg-toggle").forEach((btn) => {
+            btn.classList.toggle("is-active", btn.dataset.pkg === pkg);
+          });
+        }
+
+        document.getElementById("pkgNpm").addEventListener("click", () => switchPkg("npm"));
+        document.getElementById("pkgPnpm").addEventListener("click", () => switchPkg("pnpm"));
 
         /* =========================================================
      BOOT

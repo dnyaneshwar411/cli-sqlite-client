@@ -1,35 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Box, Text, useInput } from "ink";
-import type { DatabaseSync } from "node:sqlite";
-import type { GlobalState } from "../main.js";
-
-const GRUVBOX = {
-  bg: "#282828",
-  bgHard: "#1d2021",
-  bgSoft: "#32302f",
-  bgSelected: "#3c3836",
-  fg: "#ebdbb2",
-  fgMuted: "#a89984",
-  fgDim: "#7c6f64",
-  border: "#504945",
-  accentYellow: "#fabd2f",
-  accentGreen: "#b8bb26",
-  accentRed: "#fb4934",
-  accentOrange: "#fe8019",
-};
-
-type QueryProps = {
-  globalState: GlobalState;
-  dbConnection: DatabaseSync | undefined;
-  defaultPageSize: number;
-  isActive: boolean;
-  paneNumber: number;
-  paginationFocusRequest: number;
-};
-
-type Row = Record<string, unknown>;
-
-const PAGE_SIZES = [10, 20, 50];
+import { GRUVBOX, PAGE_SIZES } from "../config/index.js";
+import { QueryProps, Row } from "../types/index.js";
 
 function quoteIdentifier(identifier: string) {
   return `"${identifier.replaceAll('"', '""')}"`;
@@ -85,7 +57,6 @@ export default function Query({
   const [refreshKey, setRefreshKey] = useState(0);
   const pendingG = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  // selectedTable is deliberately a dependency: table selection always reads fresh rows.
   const data = useMemo(() => {
     if (!dbConnection || !globalState.selectedTable) {
       return { columns: [] as string[], rows: [] as Row[], count: 0, duration: 0 };
@@ -111,7 +82,6 @@ export default function Query({
   const paginationFocused = isActive && activeSubPane === "pagination";
   const startRow = data.rows.length ? offset + 1 : 0;
   const endRow = offset + data.rows.length;
-  // Reserve lines for the meta strip, header, pagination, SQL readout and optional menu.
   const terminalRows = (process.stdout as any).rows || 24;
   const visibleRowCount = Math.max(1, terminalRows - (pageSizeMenuOpen ? 10 : 9));
 
@@ -148,7 +118,6 @@ export default function Query({
   }, [paginationFocusRequest]);
 
   useInput((input, key) => {
-    // Shift+3 focuses the pagination strip, as shown by the third interaction target.
     if (input === "#") {
       setActiveSubPane("pagination");
       return;

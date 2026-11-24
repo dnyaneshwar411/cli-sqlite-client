@@ -21,8 +21,9 @@ A terminal user interface (TUI) for browsing and inspecting SQLite database file
 - 🗂️ **Dual-Pane Interface**:
   - **Tables Sidebar**: Browse all non-system tables in your database with live cursor indicators.
   - **Data Grid**: View rows formatted cleanly into auto-proportioned columns.
-- 📄 **Pagination & Custom Limits**: Easily paginate through large datasets with configurable page sizes (`10`, `25`, `50` rows per page).
-- ⌨️ **Vim & Keyboard Controls**: Supports both Vim-style navigation (`j`, `k`, `h`, `l`) and standard arrow keys.
+- 📄 **Scrollable Data Grid**: Keep the active row visible while browsing a page; pagination and the SQL readout stay pinned.
+- 🔢 **Row Numbers**: Every displayed row has a serial number that continues across pages.
+- ⌨️ **Vim & Keyboard Controls**: Navigate with `j`/`k`, jump with `gg` and `G`, and control pagination without leaving the keyboard.
 - 📐 **Responsive Terminal Layout**: Automatically adjusts sidebar dimensions, column widths, and line height when resizing your terminal.
 
 ---
@@ -34,30 +35,30 @@ A terminal user interface (TUI) for browsing and inspecting SQLite database file
 
 ---
 
-## 🚀 Installation & Setup
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/your-username/sqlite-viewer.git
-   cd sqlite-viewer/cli
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   pnpm install
-   ```
-
----
-
 ## 🛠️ Usage
 
-Pass the path to your target SQLite database file using either positional arguments or the `-f` flag:
+Run the CLI directly against a SQLite database. GitHub renders a copy button on each command block.
 
 ```bash
-# Using positional argument
-pnpm run exe -- path/to/database.db
+npx sqlite-cli path/to/database.db
+```
 
-# Using the -f / --file flag
+```bash
+pnpm dlx sqlite-cli path/to/database.db
+```
+
+### Run from a local clone
+
+```bash
+git clone https://github.com/dnyaneshwar411/cli-sqlite-client.git
+cd cli-sqlite-client/cli
+pnpm install
+pnpm run exe -- path/to/database.db
+```
+
+```bash
+# Using an explicit file flag
+pnpm run exe -- path/to/database.db
 pnpm run exe -- -f path/to/database.db
 ```
 
@@ -74,14 +75,18 @@ pnpm run exe -- -f path/to/database.db
 
 | Shortcut | Action |
 | :--- | :--- |
-| <kbd>Tab</kbd> | Toggle active pane focus between **Tables Sidebar** and **Rows Data Grid** |
+| <kbd>Tab</kbd> | Switch between the grid and pagination controls |
 | <kbd>j</kbd> / <kbd>↓</kbd> | Move cursor down in Tables sidebar |
 | <kbd>k</kbd> / <kbd>↑</kbd> | Move cursor up in Tables sidebar |
 | <kbd>Enter</kbd> | Select highlighted table and switch focus to Data Grid |
-| <kbd>h</kbd> / <kbd>Esc</kbd> | Switch focus back to Tables sidebar |
-| <kbd>n</kbd> / <kbd>l</kbd> / <kbd>→</kbd> | Next page of rows |
-| <kbd>p</kbd> / <kbd>←</kbd> | Previous page of rows |
-| <kbd>c</kbd> | Cycle row limit size (`10` → `25` → `50`) |
+| <kbd>j</kbd> / <kbd>k</kbd> / <kbd>↑</kbd> / <kbd>↓</kbd> | Scroll the active data row |
+| <kbd>g</kbd><kbd>g</kbd> | Jump to the first row on the current page |
+| <kbd>G</kbd> | Jump to the last row on the current page |
+| <kbd>Shift</kbd>+<kbd>3</kbd> | Focus the pagination controls |
+| <kbd>h</kbd> / <kbd>l</kbd> / <kbd>←</kbd> / <kbd>→</kbd> | Select a pagination action |
+| <kbd>Enter</kbd> | Activate Previous, Next, page limit, or Refresh |
+| <kbd>↑</kbd> / <kbd>↓</kbd> | Choose a page limit (`10`, `20`, `50`) after opening the page-limit control |
+| <kbd>Esc</kbd> | Close the page-limit picker |
 | <kbd>q</kbd> / <kbd>Ctrl+C</kbd> | Quit application |
 
 ---
@@ -90,8 +95,8 @@ pnpm run exe -- -f path/to/database.db
 
 - **`src/index.ts`**: Main entry point. Parses command line arguments (`parseArgs`), validates the provided database path, and boots the CLI.
 - **`src/repl.tsx`**: Initializes `DatabaseSync` connection via `node:sqlite`, fetches database schema tables, and mounts the React/Ink app UI.
-- **`src/components/app.tsx`**: Core TUI application component. Manages terminal window dimensions, panel focus states, keyboard event hooks (`useInput`), and SQL query execution/pagination logic.
-- **`src/components/ui/gruvbox.tsx`**: UI components (`Panel`, `DataGrid`, `Badge`, `StatusBar`) styled with Gruvbox theme palette tokens.
+- **`src/components/main.tsx`**: Coordinates global pane focus, table selection, and the Shift+3 pagination shortcut.
+- **`src/components/core/query.tsx`**: Queries the selected table, maintains the scroll window and row cursor, and renders sticky pagination controls.
 - **`src/types/index.ts`**: TypeScript definitions for application and UI state.
 
 ---
