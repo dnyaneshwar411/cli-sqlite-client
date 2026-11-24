@@ -6,3 +6,8 @@ export function paneFromShiftKey(input: string): PaneId | null {
   if (input === "2" || input === "@") return PANES.QUERY;
   return null;
 }
+
+export function extractFileName(dbPath: string): string {
+  const parts = dbPath.split(/[/\\]/);
+  return parts[parts.length - 1] || dbPath;
+}

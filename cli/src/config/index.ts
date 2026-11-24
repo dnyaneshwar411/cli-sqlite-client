@@ -20,3 +20,8 @@ export const PANES = {
   SIDEBAR: 1,
   QUERY: 2,
 } as const;
+
+export const SIDEBAR_WIDTH = 30;
+export const SCHEMA_LABEL = "schema: main";
+export const SQLITE_VERSION_LABEL = "sqlite 3.45.1";
+export const FILTER_PLACEHOLDER = "filter tables..";

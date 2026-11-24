@@ -44,3 +44,12 @@ export type StatusScreenProps = {
 };
 
 export type PaneId = (typeof PANES)[keyof typeof PANES];
+
+export type SidebarProps = {
+  globalState: GlobalState;
+  onSelectTable: SelectTableFn;
+  isActive: boolean;
+  paneNumber: number;
+};
+
+export type SidebarMode = "browse" | "filter";
