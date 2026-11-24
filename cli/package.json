@@ -1,7 +1,7 @@
 {
   "name": "sqlite-cli",
   "version": "0.0.0",
-  "description": "Full-screen Gruvbox SQLite TUI for Node.js",
+  "description": "Gruvbox SQLite TUI for Node.js",
   "main": "./dist/index.js",
   "bin": {
     "sqlite-clix": "./dist/index.js"
